@@ -4850,6 +4850,7 @@ function App() {
                 onToolOpenChangeForTab={setToolOpenForTab}
                 onOpenKnowledgeFile={(path) => { navigateToFile(path) }}
                 onActivate={() => setActiveShortcutPane('right')}
+                collapsedLeftPaddingPx={collapsedLeftPaddingPx}
                 isRecording={isRecording}
                 recordingText={voice.interimText}
                 recordingState={voice.state === 'connecting' ? 'connecting' : 'listening'}
