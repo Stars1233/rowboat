@@ -109,10 +109,31 @@ export class BrowserViewManager extends EventEmitter {
   private visible = false;
   private bounds: BrowserBounds = { x: 0, y: 0, width: 0, height: 0 };
   private snapshotCache = new Map<string, CachedSnapshot>();
+  private cleanupWindowListeners: (() => void) | null = null;
 
   attach(window: BrowserWindow): void {
+    this.cleanupWindowListeners?.();
     this.window = window;
-    window.on('closed', () => {
+
+    const resetForHostWindowNavigation = () => {
+      // Renderer refreshes do not run React unmount cleanup reliably, so the
+      // native browser view must be detached from the main process side.
+      this.visible = false;
+      this.bounds = { x: 0, y: 0, width: 0, height: 0 };
+      this.syncAttachedView();
+    };
+
+    const handleDidStartLoading = () => {
+      resetForHostWindowNavigation();
+    };
+
+    const handleRenderProcessGone = () => {
+      resetForHostWindowNavigation();
+    };
+
+    const handleClosed = () => {
+      this.cleanupWindowListeners?.();
+      this.cleanupWindowListeners = null;
       this.window = null;
       this.browserSession = null;
       this.tabs.clear();
@@ -121,7 +142,17 @@ export class BrowserViewManager extends EventEmitter {
       this.attachedTabId = null;
       this.visible = false;
       this.snapshotCache.clear();
-    });
+    };
+
+    window.webContents.on('did-start-loading', handleDidStartLoading);
+    window.webContents.on('render-process-gone', handleRenderProcessGone);
+    window.on('closed', handleClosed);
+
+    this.cleanupWindowListeners = () => {
+      window.webContents.removeListener('did-start-loading', handleDidStartLoading);
+      window.webContents.removeListener('render-process-gone', handleRenderProcessGone);
+      window.removeListener('closed', handleClosed);
+    };
   }
 
   private getSession(): Session {
