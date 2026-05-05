@@ -4,7 +4,7 @@ import { google } from 'googleapis';
 import { WorkDir } from '../config/config.js';
 import { createRun, createMessage } from '../runs/runs.js';
 import { getKgModel } from '../models/defaults.js';
-import { waitForRunCompletion } from '../agents/utils.js';
+import { getErrorDetails, waitForRunCompletion } from '../agents/utils.js';
 import { serviceLogger } from '../services/service_logger.js';
 import { loadUserConfig, updateUserEmail } from '../config/user_config.js';
 import { GoogleClientFactory } from './google-client-factory.js';
@@ -288,7 +288,7 @@ async function processAgentNotes(): Promise<void> {
             subUseCase: 'agent_notes',
         });
         await createMessage(agentRun.id, message);
-        await waitForRunCompletion(agentRun.id);
+        await waitForRunCompletion(agentRun.id, { throwOnError: true });
 
         // Mark everything as processed
         for (const p of emailPaths) {
@@ -326,7 +326,16 @@ async function processAgentNotes(): Promise<void> {
             runId: serviceRun.runId,
             level: 'error',
             message: 'Error processing agent notes',
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorDetails(error),
+        });
+        await serviceLogger.log({
+            type: 'run_complete',
+            service: serviceRun.service,
+            runId: serviceRun.runId,
+            level: 'error',
+            message: 'Agent notes processing failed',
+            durationMs: Date.now() - serviceRun.startedAt,
+            outcome: 'error',
         });
     }
 }
