@@ -28,12 +28,19 @@ export function extractDeepLinkFromArgv(argv: readonly string[]): string | null 
 }
 
 /**
- * Dispatch any rowboat:// URL — chooses navigation vs action automatically.
- * Use this from notification click handlers and other URL entry points.
+ * Dispatch any rowboat:// URL — chooses among action / oauth-completion /
+ * navigation automatically. Use this from notification click handlers and
+ * other URL entry points.
+ *
+ * OAuth completion (rowboat://oauth/google/done?session=<state>) is handled
+ * in main, not the renderer, because claiming tokens writes oauth.json and
+ * triggers sync — both main-process concerns.
  */
 export function dispatchUrl(url: string): void {
     if (parseAction(url)) {
         void dispatchAction(url);
+    } else if (parseOAuthCompletion(url)) {
+        void dispatchOAuthCompletion(url);
     } else {
         dispatchDeepLink(url);
     }
@@ -109,6 +116,46 @@ async function handleTakeMeetingNotes(eventId: string, openMeeting: boolean): Pr
     }
 
     win.webContents.send("app:takeMeetingNotes", payload);
+}
+
+// --- OAuth completion (rowboat-mode Google connect) ---
+
+interface OAuthCompletion {
+    provider: "google";
+    state: string;
+}
+
+/**
+ * Match rowboat://oauth/google/done?session=<state>. Returns null for
+ * anything else — including paths with the right shape but wrong provider
+ * or a missing `session` query param.
+ */
+function parseOAuthCompletion(url: string): OAuthCompletion | null {
+    if (!url.startsWith(URL_PREFIX)) return null;
+    const rest = url.slice(URL_PREFIX.length);
+    const queryIdx = rest.indexOf("?");
+    const path = queryIdx >= 0 ? rest.slice(0, queryIdx) : rest;
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length !== 3 || parts[0] !== "oauth" || parts[2] !== "done") return null;
+    if (parts[1] !== "google") return null;
+    const params = new URLSearchParams(queryIdx >= 0 ? rest.slice(queryIdx + 1) : "");
+    const state = params.get("session");
+    return state ? { provider: "google", state } : null;
+}
+
+async function dispatchOAuthCompletion(url: string): Promise<void> {
+    const parsed = parseOAuthCompletion(url);
+    if (!parsed) return;
+
+    // Bring the app to the front so the renderer can react to the
+    // oauthEvent IPC that completeRowboatGoogleConnect emits.
+    const win = mainWindowRef;
+    if (win && !win.isDestroyed()) focusWindow(win);
+
+    // Lazy-import to keep deeplink.ts free of OAuth deps and avoid a
+    // potential circular dep with oauth-handler.ts.
+    const { completeRowboatGoogleConnect } = await import("./oauth-handler.js");
+    await completeRowboatGoogleConnect(parsed.state);
 }
 
 function focusWindow(win: BrowserWindow): void {

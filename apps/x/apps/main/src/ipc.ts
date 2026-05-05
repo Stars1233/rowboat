@@ -35,6 +35,7 @@ import { ISlackConfigRepo } from '@x/core/dist/slack/repo.js';
 import { isOnboardingComplete, markOnboardingComplete } from '@x/core/dist/config/note_creation_config.js';
 import * as composioHandler from './composio-handler.js';
 import { consumePendingDeepLink } from './deeplink.js';
+import { qualifyAndDisconnectComposioGoogle } from '@x/core/dist/migrations/composio-google-migration.js';
 import { IAgentScheduleRepo } from '@x/core/dist/agent-schedule/repo.js';
 import { IAgentScheduleStateRepo } from '@x/core/dist/agent-schedule/state-repo.js';
 import { triggerRun as triggerAgentScheduleRun } from '@x/core/dist/agent-schedule/runner.js';
@@ -612,11 +613,8 @@ export function setupIpcHandlers() {
     'composio:list-toolkits': async () => {
       return composioHandler.listToolkits();
     },
-    'composio:use-composio-for-google': async () => {
-      return composioHandler.useComposioForGoogle();
-    },
-    'composio:use-composio-for-google-calendar': async () => {
-      return composioHandler.useComposioForGoogleCalendar();
+    'migration:check-composio-google': async () => {
+      return qualifyAndDisconnectComposioGoogle();
     },
     // Agent schedule handlers
     'agent-schedule:getConfig': async () => {

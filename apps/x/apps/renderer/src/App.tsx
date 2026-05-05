@@ -56,6 +56,7 @@ import { stripKnowledgePrefix, toKnowledgePath, wikiLabel } from '@/lib/wiki-lin
 import { splitFrontmatter, joinFrontmatter } from '@/lib/frontmatter'
 import { extractConferenceLink } from '@/lib/calendar-event'
 import { OnboardingModal } from '@/components/onboarding'
+import { ComposioGoogleMigrationModal } from '@/components/composio-google-migration-modal'
 import { CommandPalette, type CommandPaletteContext, type CommandPaletteMention } from '@/components/search-dialog'
 import { TrackModal } from '@/components/track-modal'
 import { BackgroundTaskDetail } from '@/components/background-task-detail'
@@ -780,6 +781,30 @@ function App() {
     return cleanup
   }, [refreshVoiceAvailability])
 
+  // One-time Composio→native Google migration check. Runs on mount and again
+  // after the user signs in to Rowboat (so we catch users who weren't signed
+  // in at startup). The IPC is idempotent — once `dismissed_at` is set on the
+  // main side, every subsequent call returns `{shouldShow: false}`.
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const result = await window.ipc.invoke('migration:check-composio-google', null)
+        if (result.shouldShow) {
+          setShowComposioGoogleMigration(true)
+        }
+      } catch (error) {
+        console.error('[migration] check-composio-google failed:', error)
+      }
+    }
+    void run()
+    const cleanup = window.ipc.on('oauth:didConnect', (event) => {
+      if (event.provider === 'rowboat' && event.success) {
+        void run()
+      }
+    })
+    return cleanup
+  }, [])
+
   const handleStartRecording = useCallback(() => {
     setIsRecording(true)
     isRecordingRef.current = true
@@ -1032,6 +1057,9 @@ function App() {
 
   // Onboarding state
   const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // One-time Composio→native Google migration modal
+  const [showComposioGoogleMigration, setShowComposioGoogleMigration] = useState(false)
 
   // Search state
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -4903,6 +4931,17 @@ function App() {
       <OnboardingModal
         open={showOnboarding}
         onComplete={handleOnboardingComplete}
+      />
+      <ComposioGoogleMigrationModal
+        open={showComposioGoogleMigration}
+        onOpenChange={setShowComposioGoogleMigration}
+        onReconnect={() => {
+          // Trigger the rowboat-mode Google connect flow. With no credentials
+          // and the user signed in to Rowboat, the main process opens the
+          // webapp `/oauth/google/start` URL. The deep link returns and
+          // completeRowboatGoogleConnect persists the tokens.
+          void window.ipc.invoke('oauth:connect', { provider: 'google' })
+        }}
       />
       <Dialog open={showMeetingPermissions} onOpenChange={setShowMeetingPermissions}>
         <DialogContent showCloseButton={false}>

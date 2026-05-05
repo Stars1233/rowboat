@@ -429,16 +429,10 @@ const ipcSchemas = {
       toolkits: z.array(z.string()),
     }),
   },
-  'composio:use-composio-for-google': {
+  'migration:check-composio-google': {
     req: z.null(),
     res: z.object({
-      enabled: z.boolean(),
-    }),
-  },
-  'composio:use-composio-for-google-calendar': {
-    req: z.null(),
-    res: z.object({
-      enabled: z.boolean(),
+      shouldShow: z.boolean(),
     }),
   },
   'composio:didConnect': {

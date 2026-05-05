@@ -42,7 +42,7 @@ import { ElectronBrowserControlService } from "./browser/control-service.js";
 import { ElectronNotificationService } from "./notification/electron-notification-service.js";
 import {
   DEEP_LINK_SCHEME,
-  dispatchDeepLink,
+  dispatchUrl,
   extractDeepLinkFromArgv,
   setMainWindowForDeepLinks,
 } from "./deeplink.js";
@@ -77,19 +77,19 @@ if (process.defaultApp) {
 // First-launch URL on Windows/Linux comes through argv.
 {
   const initialUrl = extractDeepLinkFromArgv(process.argv);
-  if (initialUrl) dispatchDeepLink(initialUrl);
+  if (initialUrl) dispatchUrl(initialUrl);
 }
 
 // macOS sends URLs via 'open-url' (both first launch and while running).
 app.on("open-url", (event, url) => {
   event.preventDefault();
-  dispatchDeepLink(url);
+  dispatchUrl(url);
 });
 
 // Subsequent launches on Windows/Linux land here via the single-instance lock.
 app.on("second-instance", (_event, argv) => {
   const url = extractDeepLinkFromArgv(argv);
-  if (url) dispatchDeepLink(url);
+  if (url) dispatchUrl(url);
 });
 
 // Fix PATH for packaged Electron apps on macOS/Linux.

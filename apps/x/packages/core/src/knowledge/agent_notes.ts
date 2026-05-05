@@ -8,8 +8,6 @@ import { waitForRunCompletion } from '../agents/utils.js';
 import { serviceLogger } from '../services/service_logger.js';
 import { loadUserConfig, updateUserEmail } from '../config/user_config.js';
 import { GoogleClientFactory } from './google-client-factory.js';
-import { useComposioForGoogle, executeAction } from '../composio/client.js';
-import { composioAccountsRepo } from '../composio/repo.js';
 import {
     loadAgentNotesState,
     saveAgentNotesState,
@@ -199,30 +197,7 @@ async function ensureUserEmail(): Promise<string | null> {
         return existing.email;
     }
 
-    // Try Composio (used when signed in or composio configured)
-    try {
-        if (await useComposioForGoogle()) {
-            const account = composioAccountsRepo.getAccount('gmail');
-            if (account && account.status === 'ACTIVE') {
-                const result = await executeAction('GMAIL_GET_PROFILE', {
-                    connected_account_id: account.id,
-                    user_id: 'rowboat-user',
-                    version: 'latest',
-                    arguments: { user_id: 'me' },
-                });
-                const email = (result.data as Record<string, unknown>)?.emailAddress as string | undefined;
-                if (email) {
-                    updateUserEmail(email);
-                    console.log(`[AgentNotes] Auto-populated user email via Composio: ${email}`);
-                    return email;
-                }
-            }
-        }
-    } catch (error) {
-        console.log('[AgentNotes] Could not fetch email via Composio:', error instanceof Error ? error.message : error);
-    }
-
-    // Try direct Google OAuth
+    // Try direct Google OAuth (covers both BYOK and rowboat modes)
     try {
         const auth = await GoogleClientFactory.getClient();
         if (auth) {
