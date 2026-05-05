@@ -2400,6 +2400,10 @@ function App() {
     }
   }, [runId])
 
+  const dismissBrowserOverlay = useCallback(() => {
+    setIsBrowserOpen(false)
+  }, [])
+
   const handleNewChat = useCallback(() => {
     // Invalidate any in-flight run loads (rapid switching can otherwise "pop" old conversations back in)
     loadRunRequestIdRef.current += 1
@@ -2623,6 +2627,7 @@ function App() {
 
   // File tab operations
   const openFileInNewTab = useCallback((path: string) => {
+    dismissBrowserOverlay()
     const existingTab = fileTabs.find(t => t.path === path)
     if (existingTab) {
       setActiveFileTabId(existingTab.id)
@@ -2635,11 +2640,12 @@ function App() {
     setActiveFileTabId(id)
     setIsGraphOpen(false)
     setSelectedPath(path)
-  }, [fileTabs])
+  }, [fileTabs, dismissBrowserOverlay])
 
   const switchFileTab = useCallback((tabId: string) => {
     const tab = fileTabs.find(t => t.id === tabId)
     if (!tab) return
+    dismissBrowserOverlay()
     setActiveFileTabId(tabId)
     setSelectedBackgroundTask(null)
     setExpandedFrom(null)
@@ -2662,7 +2668,7 @@ function App() {
     setIsGraphOpen(false)
     setIsSuggestedTopicsOpen(false)
     setSelectedPath(tab.path)
-  }, [fileTabs, isRightPaneMaximized])
+  }, [fileTabs, isRightPaneMaximized, dismissBrowserOverlay])
 
   const closeFileTab = useCallback((tabId: string) => {
     const closingTab = fileTabs.find(t => t.id === tabId)
@@ -2734,8 +2740,9 @@ function App() {
       // Create a new tab
       const id = newChatTabId()
       setChatTabs(prev => [...prev, { id, runId: null }])
-      setActiveChatTabId(id)
+        setActiveChatTabId(id)
     }
+    dismissBrowserOverlay()
     handleNewChat()
     // Left-pane "new chat" should always open full chat view.
     if (selectedPath || isGraphOpen || isSuggestedTopicsOpen) {
@@ -2747,7 +2754,7 @@ function App() {
     setSelectedPath(null)
     setIsGraphOpen(false)
     setIsSuggestedTopicsOpen(false)
-  }, [chatTabs, activeChatTabId, handleNewChat, selectedPath, isGraphOpen, isSuggestedTopicsOpen])
+  }, [chatTabs, activeChatTabId, dismissBrowserOverlay, handleNewChat, selectedPath, isGraphOpen, isSuggestedTopicsOpen])
 
   // Sidebar variant: create/switch chat tab without leaving file/graph context.
   const handleNewChatTabInSidebar = useCallback(() => {
@@ -2865,11 +2872,12 @@ function App() {
     if (selectedPath || isGraphOpen || isSuggestedTopicsOpen) {
       setExpandedFrom({ path: selectedPath, graph: isGraphOpen, suggestedTopics: isSuggestedTopicsOpen })
     }
+    dismissBrowserOverlay()
     setIsRightPaneMaximized(false)
     setSelectedPath(null)
     setIsGraphOpen(false)
     setIsSuggestedTopicsOpen(false)
-  }, [selectedPath, isGraphOpen, isSuggestedTopicsOpen])
+  }, [selectedPath, isGraphOpen, isSuggestedTopicsOpen, dismissBrowserOverlay])
 
   const handleCloseFullScreenChat = useCallback(() => {
     if (expandedFrom) {
@@ -3004,8 +3012,7 @@ function App() {
       case 'chat':
         setSelectedPath(null)
         setIsGraphOpen(false)
-        // Don't touch isBrowserOpen here — chat navigation should land in
-        // the right sidebar when the browser overlay is active.
+        setIsBrowserOpen(false)
         setExpandedFrom(null)
         setIsRightPaneMaximized(false)
         setSelectedBackgroundTask(null)
@@ -3021,7 +3028,12 @@ function App() {
 
   const navigateToView = useCallback(async (nextView: ViewState) => {
     const current = currentViewState
-    if (viewStatesEqual(current, nextView)) return
+    if (viewStatesEqual(current, nextView)) {
+      if (isBrowserOpen) {
+        dismissBrowserOverlay()
+      }
+      return
+    }
 
     cancelRecordingIfActive()
     const nextHistory = {
@@ -3030,7 +3042,7 @@ function App() {
     }
     setHistory(nextHistory)
     await applyViewState(nextView)
-  }, [appendUnique, applyViewState, cancelRecordingIfActive, currentViewState, setHistory])
+  }, [appendUnique, applyViewState, cancelRecordingIfActive, currentViewState, setHistory, isBrowserOpen, dismissBrowserOverlay])
 
   const navigateBack = useCallback(async () => {
     const { back, forward } = historyRef.current
@@ -4329,6 +4341,8 @@ function App() {
               meetingSummarizing={meetingSummarizing}
               meetingAvailable={voiceAvailable}
               onToggleMeeting={() => { void handleToggleMeeting() }}
+              isSearchOpen={isSearchOpen}
+              isMeetingActionActive={showMeetingPermissions || meetingSummarizing || meetingTranscription.state !== 'idle'}
               isBrowserOpen={isBrowserOpen}
               onToggleBrowser={handleToggleBrowser}
               isSuggestedTopicsOpen={isSuggestedTopicsOpen}
@@ -4463,7 +4477,10 @@ function App() {
               </ContentHeader>
 
               {isBrowserOpen ? (
-                <BrowserPane onClose={handleCloseBrowser} />
+                <BrowserPane
+                  onClose={handleCloseBrowser}
+                  forceHidden={isSearchOpen || showMeetingPermissions}
+                />
               ) : isSuggestedTopicsOpen ? (
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <SuggestedTopicsView

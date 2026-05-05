@@ -186,6 +186,8 @@ type SidebarContentPanelProps = {
   meetingSummarizing?: boolean
   meetingAvailable?: boolean
   onToggleMeeting?: () => void
+  isSearchOpen?: boolean
+  isMeetingActionActive?: boolean
   isBrowserOpen?: boolean
   onToggleBrowser?: () => void
   isSuggestedTopicsOpen?: boolean
@@ -420,6 +422,8 @@ export function SidebarContentPanel({
   meetingSummarizing = false,
   meetingAvailable = false,
   onToggleMeeting,
+  isSearchOpen = false,
+  isMeetingActionActive = false,
   isBrowserOpen = false,
   onToggleBrowser,
   isSuggestedTopicsOpen = false,
@@ -436,6 +440,9 @@ export function SidebarContentPanel({
   const [loggingIn, setLoggingIn] = useState(false)
   const [appUrl, setAppUrl] = useState<string | null>(null)
   const { billing } = useBilling(isRowboatConnected)
+  const isMeetingQuickActionSelected = isMeetingActionActive
+  const isBrowserQuickActionSelected = isBrowserOpen && !isSearchOpen && !isMeetingQuickActionSelected
+  const isSuggestedTopicsQuickActionSelected = isSuggestedTopicsOpen && !isBrowserOpen
 
   const handleRowboatLogin = useCallback(async () => {
     try {
@@ -533,7 +540,12 @@ export function SidebarContentPanel({
             <button
               type="button"
               onClick={onOpenSearch}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              className={cn(
+                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                isSearchOpen
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )}
             >
               <SearchIcon className="size-4" />
               <span>Search</span>
@@ -546,9 +558,14 @@ export function SidebarContentPanel({
               disabled={meetingState === 'connecting' || meetingState === 'stopping' || meetingSummarizing}
               className={cn(
                 "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors disabled:pointer-events-none",
+                isMeetingQuickActionSelected
+                  ? "bg-sidebar-accent"
+                  : "hover:bg-sidebar-accent",
                 meetingState === 'recording'
-                  ? "text-red-500 hover:bg-sidebar-accent"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? "text-red-500"
+                  : isMeetingQuickActionSelected
+                    ? "text-sidebar-accent-foreground"
+                    : "text-sidebar-foreground/80 hover:text-sidebar-accent-foreground"
               )}
             >
               {meetingSummarizing || meetingState === 'connecting' ? (
@@ -575,7 +592,7 @@ export function SidebarContentPanel({
               onClick={onToggleBrowser}
               className={cn(
                 "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                isBrowserOpen
+                isBrowserQuickActionSelected
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
@@ -590,7 +607,7 @@ export function SidebarContentPanel({
               onClick={onOpenSuggestedTopics}
               className={cn(
                 "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                isSuggestedTopicsOpen
+                isSuggestedTopicsQuickActionSelected
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
