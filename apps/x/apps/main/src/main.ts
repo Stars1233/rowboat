@@ -112,7 +112,9 @@ function initializeExecutionEnvironment(): void {
     ).trim();
 
     const env = JSON.parse(stdout) as Record<string, string>;
-    process.env = { ...env, ...process.env };
+    // Let the user's shell environment win for overlapping keys like PATH.
+    // Finder/launched GUI apps on macOS often start with a stripped PATH.
+    process.env = { ...process.env, ...env };
   } catch (error) {
     console.error('Failed to load shell environment', error);
   }
