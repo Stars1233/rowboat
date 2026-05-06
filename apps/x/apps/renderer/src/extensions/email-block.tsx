@@ -117,7 +117,6 @@ function EmailExpandedBody({
     ? `https://mail.google.com/mail/u/0/#all/${config.threadId}`
     : null
 
-  const senderName = config.from ? extractName(config.from) : 'Unknown'
   const initial = config.from ? getInitial(config.from) : '?'
   const color = config.from ? avatarColor(config.from) : '#5f6368'
   const hasDraft = !!config.draft_response

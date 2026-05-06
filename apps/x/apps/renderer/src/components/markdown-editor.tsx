@@ -713,7 +713,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
       MermaidBlockExtension,
       WikiLink.configure({
         onCreate: wikiLinks?.onCreate
-          ? (path) => {
+          ? (path: string) => {
               void wikiLinks.onCreate(path)
             }
           : undefined,
