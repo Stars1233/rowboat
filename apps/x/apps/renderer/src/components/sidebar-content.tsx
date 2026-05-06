@@ -214,6 +214,8 @@ type SidebarContentPanelProps = {
   onToggleBrowser?: () => void
   isSuggestedTopicsOpen?: boolean
   onOpenSuggestedTopics?: () => void
+  isBackgroundAgentsOpen?: boolean
+  onOpenBackgroundAgents?: () => void
 } & React.ComponentProps<typeof Sidebar>
 
 const sectionTabs: { id: ActiveSection; label: string }[] = [
@@ -491,6 +493,8 @@ export function SidebarContentPanel({
   onToggleBrowser,
   isSuggestedTopicsOpen = false,
   onOpenSuggestedTopics,
+  isBackgroundAgentsOpen = false,
+  onOpenBackgroundAgents,
   ...props
 }: SidebarContentPanelProps) {
   const { activeSection, setActiveSection } = useSidebarSection()
@@ -506,6 +510,7 @@ export function SidebarContentPanel({
   const isMeetingQuickActionSelected = isMeetingActionActive
   const isBrowserQuickActionSelected = isBrowserOpen && !isSearchOpen && !isMeetingQuickActionSelected
   const isSuggestedTopicsQuickActionSelected = isSuggestedTopicsOpen && !isBrowserOpen
+  const isBackgroundAgentsQuickActionSelected = isBackgroundAgentsOpen && !isBrowserOpen
 
   const handleRowboatLogin = useCallback(async () => {
     try {
@@ -677,6 +682,21 @@ export function SidebarContentPanel({
             >
               <Lightbulb className="size-4" />
               <span>Suggested Topics</span>
+            </button>
+          )}
+          {onOpenBackgroundAgents && (
+            <button
+              type="button"
+              onClick={onOpenBackgroundAgents}
+              className={cn(
+                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                isBackgroundAgentsQuickActionSelected
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              )}
+            >
+              <Bot className="size-4" />
+              <span>Background agents</span>
             </button>
           )}
         </div>
