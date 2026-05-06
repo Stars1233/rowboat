@@ -1,11 +1,30 @@
 import { z } from 'zod'
-import { useMemo } from 'react'
+import { useMemo, type ComponentType } from 'react'
 import { mergeAttributes, Node } from '@tiptap/react'
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react'
-import { Radio, Loader2 } from 'lucide-react'
+import { Radio, Loader2, type LucideProps } from 'lucide-react'
+import * as LucideIcons from 'lucide-react'
 import { parse as parseYaml } from 'yaml'
 import { TrackBlockSchema } from '@x/shared/dist/track-block.js'
 import { useTrackStatus } from '@/hooks/use-track-status'
+
+function resolveIcon(iconName: string): ComponentType<LucideProps> | null {
+  const key = iconName
+    .split('-')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join('')
+  const component = (LucideIcons as Record<string, unknown>)[key]
+  if (component != null) return component as ComponentType<LucideProps>
+  return null
+}
+
+function TrackIcon({ icon, size }: { icon?: string; size: number }) {
+  if (icon) {
+    const Icon = resolveIcon(icon)
+    if (Icon) return <Icon size={size} />
+  }
+  return <Radio size={size} />
+}
 
 function truncate(text: string, maxLen: number): string {
   const clean = text.replace(/\s+/g, ' ').trim()
@@ -87,6 +106,7 @@ function TrackBlockView({ node, deleteNode, extension }: {
       data-type="track-block"
       data-trigger={triggerType}
       data-active={active ? 'true' : 'false'}
+      data-trackid={trackId}
     >
       <button
         type="button"
@@ -96,13 +116,13 @@ function TrackBlockView({ node, deleteNode, extension }: {
         onMouseDown={(e) => e.stopPropagation()}
         title={instruction ? `${trackId}: ${instruction}` : trackId}
       >
-        {isRunning
-          ? <Loader2 size={13} className="animate-spin track-block-chip-icon" />
-          : <Radio size={13} className="track-block-chip-icon" />}
+        <span className="track-block-chip-icon">
+          {isRunning
+            ? <Loader2 size={24} className="animate-spin" />
+            : <TrackIcon icon={track?.icon} size={24} />}
+        </span>
         <span className="track-block-chip-id">{trackId || 'track'}</span>
-        {instruction && (
-          <span className="track-block-chip-sep">·</span>
-        )}
+        {instruction && <span className="track-block-chip-sep">·</span>}
         {instruction && (
           <span className="track-block-chip-instruction">{truncate(instruction, 80)}</span>
         )}
