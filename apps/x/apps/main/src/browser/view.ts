@@ -113,7 +113,9 @@ export class BrowserViewManager extends EventEmitter {
 
   attach(window: BrowserWindow): void {
     this.cleanupWindowListeners?.();
+    this.cleanupWindowListeners = null;
     this.window = window;
+    const hostWebContents = window.webContents;
 
     const resetForHostWindowNavigation = () => {
       // Renderer refreshes do not run React unmount cleanup reliably, so the
@@ -132,10 +134,16 @@ export class BrowserViewManager extends EventEmitter {
     };
 
     const handleClosed = () => {
-      this.cleanupWindowListeners?.();
+      if (this.window !== window) return;
+
+      const tabs = [...this.tabs.values()];
       this.cleanupWindowListeners = null;
       this.window = null;
       this.browserSession = null;
+      this.bounds = { x: 0, y: 0, width: 0, height: 0 };
+      for (const tab of tabs) {
+        this.destroyTab(tab);
+      }
       this.tabs.clear();
       this.tabOrder = [];
       this.activeTabId = null;
@@ -144,14 +152,18 @@ export class BrowserViewManager extends EventEmitter {
       this.snapshotCache.clear();
     };
 
-    window.webContents.on('did-start-loading', handleDidStartLoading);
-    window.webContents.on('render-process-gone', handleRenderProcessGone);
+    hostWebContents.on('did-start-loading', handleDidStartLoading);
+    hostWebContents.on('render-process-gone', handleRenderProcessGone);
     window.on('closed', handleClosed);
 
     this.cleanupWindowListeners = () => {
-      window.webContents.removeListener('did-start-loading', handleDidStartLoading);
-      window.webContents.removeListener('render-process-gone', handleRenderProcessGone);
-      window.removeListener('closed', handleClosed);
+      if (!hostWebContents.isDestroyed()) {
+        hostWebContents.removeListener('did-start-loading', handleDidStartLoading);
+        hostWebContents.removeListener('render-process-gone', handleRenderProcessGone);
+      }
+      if (!window.isDestroyed()) {
+        window.removeListener('closed', handleClosed);
+      }
     };
   }
 
