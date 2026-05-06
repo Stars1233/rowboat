@@ -37,21 +37,14 @@ export function ComposioGoogleMigrationModal({
         <div className="p-6 pb-0">
           <DialogHeader className="space-y-1.5">
             <DialogTitle className="text-lg font-semibold">
-              Reconnect Google to keep syncing
+              Reconnect Google to resume syncing
             </DialogTitle>
             <DialogDescription asChild>
               <div className="space-y-3 text-sm leading-relaxed">
                 <p>
-                  Rowboat used to sync your Gmail and Calendar through{" "}
-                  <span className="font-medium text-foreground">Composio</span>, a
-                  third-party connector. We&apos;ve now built a direct connection to
-                  Google — it&apos;s faster, more private, and doesn&apos;t rely on a
-                  middleman.
-                </p>
-                <p>
-                  We&apos;ve disconnected the Composio connection. Reconnect Google
-                  directly to resume syncing — your existing emails and calendar
-                  events stay exactly where they are.
+                  Knowledge graph syncing for Gmail and Calendar now uses a
+                  direct Google connection. Reconnect to resume. Your existing
+                  emails and events stay where they are.
                 </p>
               </div>
             </DialogDescription>
