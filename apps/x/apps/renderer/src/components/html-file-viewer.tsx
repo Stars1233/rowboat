@@ -2,6 +2,28 @@ import { useEffect, useState } from 'react'
 import { AlertCircleIcon, ExternalLinkIcon, FileTextIcon, Loader2Icon } from 'lucide-react'
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024
+const CACHE_MAX_ENTRIES = 20
+
+type CacheEntry = { html: string; mtimeMs: number; size: number }
+const htmlCache = new Map<string, CacheEntry>()
+
+function getCached(path: string, mtimeMs: number, size: number): string | null {
+  const entry = htmlCache.get(path)
+  if (!entry || entry.mtimeMs !== mtimeMs || entry.size !== size) return null
+  // Refresh LRU position
+  htmlCache.delete(path)
+  htmlCache.set(path, entry)
+  return entry.html
+}
+
+function setCached(path: string, html: string, mtimeMs: number, size: number) {
+  htmlCache.set(path, { html, mtimeMs, size })
+  while (htmlCache.size > CACHE_MAX_ENTRIES) {
+    const oldest = htmlCache.keys().next().value
+    if (oldest === undefined) break
+    htmlCache.delete(oldest)
+  }
+}
 
 type ViewerState =
   | { kind: 'loading' }
@@ -35,8 +57,14 @@ export function HtmlFileViewer({ path }: HtmlFileViewerProps) {
           setState({ kind: 'tooLarge', sizeMB: stat.size / (1024 * 1024) })
           return
         }
+        const cachedHtml = getCached(path, stat.mtimeMs, stat.size)
+        if (cachedHtml !== null) {
+          setState(cachedHtml.trim() === '' ? { kind: 'empty' } : { kind: 'loaded', html: cachedHtml })
+          return
+        }
         const result = await window.ipc.invoke('workspace:readFile', { path })
         if (cancelled) return
+        setCached(path, result.data, stat.mtimeMs, stat.size)
         if (!result.data || result.data.trim() === '') {
           setState({ kind: 'empty' })
           return
