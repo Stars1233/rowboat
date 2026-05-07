@@ -17,6 +17,7 @@ import { HtmlFileViewer } from '@/components/html-file-viewer';
 import { ImageFileViewer } from '@/components/image-file-viewer';
 import { VideoFileViewer } from '@/components/video-file-viewer';
 import { PdfFileViewer } from '@/components/pdf-file-viewer';
+import { AudioFileViewer } from '@/components/audio-file-viewer';
 import { useDebounce } from './hooks/use-debounce';
 import { SidebarContentPanel } from '@/components/sidebar-content';
 import { SuggestedTopicsView } from '@/components/suggested-topics-view';
@@ -1431,7 +1432,7 @@ function App() {
     // Media viewers (HTML, image, video, PDF) self-load via app:// protocol.
     // Skip the generic UTF-8 loader so we don't trash fileContent with binary
     // bytes or double-fetch large files.
-    if (/\.(html?|png|jpe?g|webp|gif|svg|avif|bmp|ico|mp4|mov|webm|m4v|pdf)$/i.test(pathToLoad)) {
+    if (/\.(html?|png|jpe?g|webp|gif|svg|avif|bmp|ico|mp4|mov|webm|m4v|pdf|mp3|wav|m4a|ogg|flac|aac)$/i.test(pathToLoad)) {
       setFileContent('')
       return
     }
@@ -4845,6 +4846,10 @@ function App() {
                 ) : selectedPath?.toLowerCase().endsWith('.pdf') ? (
                   <div className="flex-1 min-h-0 overflow-hidden">
                     <PdfFileViewer path={selectedPath} />
+                  </div>
+                ) : selectedPath && /\.(mp3|wav|m4a|ogg|flac|aac)$/i.test(selectedPath) ? (
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <AudioFileViewer path={selectedPath} />
                   </div>
                 ) : (
                   <div className="flex-1 overflow-auto p-4">
