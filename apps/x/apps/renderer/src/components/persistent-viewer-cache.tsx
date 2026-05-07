@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { HtmlFileViewer } from './html-file-viewer'
 import { PdfFileViewer } from './pdf-file-viewer'
 
-const CACHE_LIMIT = 5
+const CACHE_LIMIT = 3
 
 function isCacheable(path: string): boolean {
   const lower = path.toLowerCase()
