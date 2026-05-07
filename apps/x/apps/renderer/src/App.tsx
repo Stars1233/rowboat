@@ -1425,10 +1425,11 @@ function App() {
     }
     const requestId = (fileLoadRequestIdRef.current += 1)
     const pathToLoad = selectedPath
-    // For HTML files, clear stale content immediately so the viewer shows
-    // its loading state instead of rendering the previous file's bytes.
+    // HtmlFileViewer self-loads (with size check, error states, etc.)
+    // Skip the generic loader so we don't double-fetch large files.
     if (pathToLoad.toLowerCase().endsWith('.html') || pathToLoad.toLowerCase().endsWith('.htm')) {
       setFileContent('')
+      return
     }
     let cancelled = false
     ;(async () => {
@@ -4827,7 +4828,7 @@ function App() {
                   </div>
                 ) : selectedPath?.toLowerCase().endsWith('.html') || selectedPath?.toLowerCase().endsWith('.htm') ? (
                   <div className="flex-1 min-h-0 overflow-hidden">
-                    <HtmlFileViewer html={fileContent} path={selectedPath} />
+                    <HtmlFileViewer path={selectedPath} />
                   </div>
                 ) : (
                   <div className="flex-1 overflow-auto p-4">
