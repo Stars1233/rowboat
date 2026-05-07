@@ -16,6 +16,7 @@ import { BasesView, type BaseConfig, DEFAULT_BASE_CONFIG } from '@/components/ba
 import { HtmlFileViewer } from '@/components/html-file-viewer';
 import { ImageFileViewer } from '@/components/image-file-viewer';
 import { VideoFileViewer } from '@/components/video-file-viewer';
+import { PdfFileViewer } from '@/components/pdf-file-viewer';
 import { useDebounce } from './hooks/use-debounce';
 import { SidebarContentPanel } from '@/components/sidebar-content';
 import { SuggestedTopicsView } from '@/components/suggested-topics-view';
@@ -4840,6 +4841,10 @@ function App() {
                 ) : selectedPath && /\.(mp4|mov|webm|m4v)$/i.test(selectedPath) ? (
                   <div className="flex-1 min-h-0 overflow-hidden">
                     <VideoFileViewer path={selectedPath} />
+                  </div>
+                ) : selectedPath?.toLowerCase().endsWith('.pdf') ? (
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <PdfFileViewer path={selectedPath} />
                   </div>
                 ) : (
                   <div className="flex-1 overflow-auto p-4">

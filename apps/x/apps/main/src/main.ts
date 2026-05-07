@@ -221,6 +221,9 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
       preload: preloadPath,
+      // Enable Chromium's built-in PDFium plugin so <iframe src="*.pdf">
+      // renders PDFs natively (zoom/scroll/print toolbar included).
+      plugins: true,
     },
   });
 
