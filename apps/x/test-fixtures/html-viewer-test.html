@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HTML Viewer Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 24px;
+      color: #1a1a1a;
+      background: #fafafa;
+    }
+    h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 8px; }
+    .card {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin: 16px 0;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #1d4ed8; }
+    .counter { font-size: 24px; font-weight: bold; color: #2563eb; }
+    .danger { color: #dc2626; font-weight: 600; }
+    .ok { color: #16a34a; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f3f4f6; }
+  </style>
+</head>
+<body>
+  <h1>HTML Viewer Test Page</h1>
+
+  <div class="card">
+    <h2>1. Inline Styles</h2>
+    <p>If this page looks <span class="ok">styled and clean</span>, inline CSS works.</p>
+  </div>
+
+  <div class="card">
+    <h2>2. Interactive JavaScript</h2>
+    <p>Counter: <span class="counter" id="count">0</span></p>
+    <button onclick="document.getElementById('count').textContent = parseInt(document.getElementById('count').textContent) + 1">
+      Click to increment
+    </button>
+    <p style="margin-top:8px;font-size:13px;color:#666;">If clicking increments the counter, allow-scripts works.</p>
+  </div>
+
+  <div class="card">
+    <h2>3. Sandbox Verification</h2>
+    <p>The next button tries to access <code>window.parent</code>:</p>
+    <button onclick="
+      try {
+        const x = window.parent.location.href;
+        document.getElementById('parentResult').innerHTML = '<span class=&quot;danger&quot;>FAIL: parent accessible — ' + x + '</span>';
+      } catch (e) {
+        document.getElementById('parentResult').innerHTML = '<span class=&quot;ok&quot;>OK: parent blocked — ' + e.message + '</span>';
+      }
+    ">Test parent access</button>
+    <p id="parentResult" style="margin-top:8px;">Click to test.</p>
+  </div>
+
+  <div class="card">
+    <h2>4. External Network Request</h2>
+    <p>Tries to fetch from a remote URL (should fail due to no allow-same-origin):</p>
+    <button onclick="
+      fetch('https://api.github.com/zen')
+        .then(r => r.text())
+        .then(t => document.getElementById('netResult').innerHTML = '<span class=&quot;danger&quot;>Network worked: ' + t + '</span>')
+        .catch(e => document.getElementById('netResult').innerHTML = '<span class=&quot;ok&quot;>Blocked or failed: ' + e.message + '</span>')
+    ">Test fetch</button>
+    <p id="netResult" style="margin-top:8px;">Click to test.</p>
+  </div>
+
+  <div class="card">
+    <h2>5. Table Rendering</h2>
+    <table>
+      <thead><tr><th>Feature</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Inline CSS</td><td class="ok">Working</td></tr>
+        <tr><td>Inline JS</td><td class="ok">Working</td></tr>
+        <tr><td>Sandbox isolation</td><td class="ok">Active</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>6. Auto-run script on load</h2>
+    <p id="loaded" style="font-size:13px;color:#666;">Script did not run.</p>
+    <script>
+      document.getElementById('loaded').innerHTML = '<span class="ok">Script ran on load at ' + new Date().toLocaleTimeString() + '</span>';
+    </script>
+  </div>
+</body>
+</html>

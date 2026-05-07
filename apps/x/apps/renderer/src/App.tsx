@@ -13,6 +13,7 @@ import { ChatInputWithMentions, type StagedAttachment } from './components/chat-
 import { ChatMessageAttachments } from '@/components/chat-message-attachments'
 import { GraphView, type GraphEdge, type GraphNode } from '@/components/graph-view';
 import { BasesView, type BaseConfig, DEFAULT_BASE_CONFIG } from '@/components/bases-view';
+import { HtmlFileViewer } from '@/components/html-file-viewer';
 import { useDebounce } from './hooks/use-debounce';
 import { SidebarContentPanel } from '@/components/sidebar-content';
 import { SuggestedTopicsView } from '@/components/suggested-topics-view';
@@ -1424,6 +1425,11 @@ function App() {
     }
     const requestId = (fileLoadRequestIdRef.current += 1)
     const pathToLoad = selectedPath
+    // For HTML files, clear stale content immediately so the viewer shows
+    // its loading state instead of rendering the previous file's bytes.
+    if (pathToLoad.toLowerCase().endsWith('.html') || pathToLoad.toLowerCase().endsWith('.htm')) {
+      setFileContent('')
+    }
     let cancelled = false
     ;(async () => {
       try {
@@ -4818,6 +4824,10 @@ function App() {
                         }}
                       />
                     )}
+                  </div>
+                ) : selectedPath?.toLowerCase().endsWith('.html') || selectedPath?.toLowerCase().endsWith('.htm') ? (
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <HtmlFileViewer html={fileContent} path={selectedPath} />
                   </div>
                 ) : (
                   <div className="flex-1 overflow-auto p-4">
