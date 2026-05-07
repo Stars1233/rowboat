@@ -1,9 +1,6 @@
 import z from "zod";
-import { TrackBlockSchema } from "@x/shared/dist/track-block.js";
+import { TrackSchema } from "@x/shared/dist/track.js";
 
 export const TrackStateSchema = z.object({
-    track: TrackBlockSchema,
-    fenceStart: z.number(),
-    fenceEnd: z.number(),
-    content: z.string(),
+    track: TrackSchema,
 });

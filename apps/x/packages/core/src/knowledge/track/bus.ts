@@ -1,4 +1,4 @@
-import type { TrackEventType } from '@x/shared/dist/track-block.js';
+import type { TrackEventType } from '@x/shared/dist/track.js';
 
 type Handler = (event: TrackEventType) => void;
 

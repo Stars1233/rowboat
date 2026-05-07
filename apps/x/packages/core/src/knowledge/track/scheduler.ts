@@ -2,7 +2,7 @@ import { PrefixLogger } from '@x/shared';
 import * as workspace from '../../workspace/workspace.js';
 import { fetchAll } from './fileops.js';
 import { triggerTrackUpdate } from './runner.js';
-import { isTrackScheduleDue } from './schedule-utils.js';
+import { isTriggerDue, type TimedTrigger } from './schedule-utils.js';
 
 const log = new PrefixLogger('TrackScheduler');
 const POLL_INTERVAL_MS = 15_000; // 15 seconds
@@ -33,17 +33,23 @@ async function processScheduledTracks(): Promise<void> {
         for (const trackState of tracks) {
             const { track } = trackState;
             if (!track.active) continue;
-            if (!track.schedule) continue;
+            if (!track.triggers || track.triggers.length === 0) continue;
 
-            const due = isTrackScheduleDue(track.schedule, track.lastRunAt ?? null);
-            log.log(`Track "${track.trackId}" in ${relativePath}: schedule=${track.schedule.type}, lastRunAt=${track.lastRunAt ?? 'never'}, due=${due}`);
+            const timed: TimedTrigger[] = track.triggers.filter(
+                (t): t is TimedTrigger => t.type !== 'event',
+            );
+            if (timed.length === 0) continue;
 
-            if (due) {
-                log.log(`Triggering "${track.trackId}" in ${relativePath}`);
-                triggerTrackUpdate(track.trackId, relativePath, undefined, 'timed').catch(err => {
-                    log.log(`Error running ${track.trackId}:`, err);
-                });
+            const dueTrigger = timed.find(t => isTriggerDue(t, track.lastRunAt ?? null));
+            if (!dueTrigger) {
+                log.log(`Track "${track.id}" in ${relativePath}: ${timed.length} timed trigger(s), none due`);
+                continue;
             }
+
+            log.log(`Triggering "${track.id}" in ${relativePath} (matched ${dueTrigger.type})`);
+            triggerTrackUpdate(track.id, relativePath, undefined, 'timed').catch(err => {
+                log.log(`Error running ${track.id}:`, err);
+            });
         }
     }
 }

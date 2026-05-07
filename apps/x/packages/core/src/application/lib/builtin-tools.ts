@@ -28,7 +28,6 @@ import { getCurrentUseCase } from "../../analytics/use_case.js";
 import { isSignedIn } from "../../account/account.js";
 import { getAccessToken } from "../../auth/tokens.js";
 import { API_URL } from "../../config/env.js";
-import { updateContent, updateTrackBlock } from "../../knowledge/track/fileops.js";
 import type { IBrowserControlService } from "../browser-control/service.js";
 import type { INotificationService } from "../notification/service.js";
 // Parser libraries are loaded dynamically inside parseFile.execute()
@@ -1551,44 +1550,25 @@ export const BuiltinTools: z.infer<typeof BuiltinToolsSchema> = {
         },
         isAvailable: async () => isComposioConfigured(),
     },
-    'update-track-content': {
-        description: "Update the output content of a track block in a knowledge note. This replaces the content inside the track's target region (between <!--track-target:ID--> markers), or creates the target region if it doesn't exist. Also updates the track's lastRunAt timestamp.",
+    'run-track': {
+        description: "Manually trigger a track to run now on its host note. Equivalent to the user clicking the Run button on the track in the sidebar, but you can pass extra `context` to bias what the track agent does this run — most useful for backfills (e.g. seeding a new email-tracking track from existing synced emails) or focused refreshes. Returns the action taken, summary, and the new note body.",
         inputSchema: z.object({
             filePath: z.string().describe("Workspace-relative path to the note file (e.g., 'knowledge/Notes/my-note.md')"),
-            trackId: z.string().describe("The track block's trackId"),
-            content: z.string().describe("The new content to place inside the track's target region"),
-        }),
-        execute: async ({ filePath, trackId, content }: { filePath: string; trackId: string; content: string }) => {
-            try {
-                await updateContent(filePath, trackId, content);
-                await updateTrackBlock(filePath, trackId, { lastRunAt: new Date().toISOString() });
-                return { success: true, message: `Updated track ${trackId} in ${filePath}` };
-            } catch (err) {
-                const msg = err instanceof Error ? err.message : String(err);
-                return { success: false, error: msg };
-            }
-        },
-    },
-
-    'run-track-block': {
-        description: "Manually trigger a track block to run now. Equivalent to the user clicking the Play button on the block, but you can pass extra `context` to bias what the track agent does this run — most useful for backfills (e.g. seeding a new email-tracking block from existing synced emails) or focused refreshes. Returns the action taken, summary, and the new content.",
-        inputSchema: z.object({
-            filePath: z.string().describe("Workspace-relative path to the note file (e.g., 'knowledge/Notes/my-note.md')"),
-            trackId: z.string().describe("The track block's trackId (must exist in the file)"),
+            id: z.string().describe("The track's id (must exist in the note's frontmatter `track:` array)"),
             context: z.string().optional().describe(
-                "Optional extra context for the track agent to consider for THIS run only — does not modify the block's instruction. " +
+                "Optional extra context for the track agent to consider for THIS run only — does not modify the track's instruction. " +
                 "Use it to drive backfills (e.g. 'Backfill from existing synced emails in gmail_sync/ from the last 90 days about this topic') " +
                 "or focused refreshes (e.g. 'Focus on changes from the last 7 days'). " +
                 "Omit for a plain refresh."
             ),
         }),
-        execute: async ({ filePath, trackId, context }: { filePath: string; trackId: string; context?: string }) => {
+        execute: async ({ filePath, id, context }: { filePath: string; id: string; context?: string }) => {
             const knowledgeRelativePath = filePath.replace(/^knowledge\//, '');
             try {
                 // Lazy import to break a module-init cycle:
                 // builtin-tools → track/runner → runs/runs → agents/runtime → builtin-tools
                 const { triggerTrackUpdate } = await import("../../knowledge/track/runner.js");
-                const result = await triggerTrackUpdate(trackId, knowledgeRelativePath, context, 'manual');
+                const result = await triggerTrackUpdate(id, knowledgeRelativePath, context, 'manual');
                 return {
                     success: !result.error,
                     runId: result.runId,

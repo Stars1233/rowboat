@@ -1,6 +1,6 @@
 import { generateObject } from 'ai';
-import { trackBlock, PrefixLogger } from '@x/shared';
-import type { KnowledgeEvent } from '@x/shared/dist/track-block.js';
+import { track, PrefixLogger } from '@x/shared';
+import type { KnowledgeEvent } from '@x/shared/dist/track.js';
 import { createProvider } from '../../models/models.js';
 import { getDefaultModelAndProvider, getTrackBlockModel, resolveProviderConfig } from '../../models/defaults.js';
 import { captureLlmUsage } from '../../analytics/usage.js';
@@ -19,12 +19,12 @@ export interface ParsedTrack {
 
 const ROUTING_SYSTEM_PROMPT = `You are a routing classifier for a knowledge management system.
 
-You will receive an event (something that happened — an email, meeting, message, etc.) and a list of track blocks. Each track block has:
+You will receive an event (something that happened — an email, meeting, message, etc.) and a list of tracks. Each track has:
 - trackId: an identifier (only unique within its file)
 - filePath: the note file the track lives in
-- eventMatchCriteria: a description of what kinds of signals are relevant to this track
+- matchCriteria: a description of what kinds of signals are relevant to this track (collected from the track's event triggers)
 
-Your job is to identify which track blocks MIGHT be relevant to this event.
+Your job is to identify which tracks MIGHT be relevant to this event.
 
 Rules:
 - Be LIBERAL in your selections. Include any track that is even moderately relevant.
@@ -47,7 +47,7 @@ async function resolveModel() {
 
 function buildRoutingPrompt(event: KnowledgeEvent, batch: ParsedTrack[]): string {
     const trackList = batch
-        .map((t, i) => `${i + 1}. trackId: ${t.trackId}\n   filePath: ${t.filePath}\n   eventMatchCriteria: ${t.eventMatchCriteria}`)
+        .map((t, i) => `${i + 1}. trackId: ${t.trackId}\n   filePath: ${t.filePath}\n   matchCriteria: ${t.eventMatchCriteria}`)
         .join('\n\n');
 
     return `## Event
@@ -58,7 +58,7 @@ Time: ${event.createdAt}
 
 ${event.payload}
 
-## Track Blocks
+## Tracks
 
 ${trackList}`;
 }
@@ -99,7 +99,7 @@ export async function findCandidates(
                 model,
                 system: ROUTING_SYSTEM_PROMPT,
                 prompt: buildRoutingPrompt(event, batch),
-                schema: trackBlock.Pass1OutputSchema,
+                schema: track.Pass1OutputSchema,
             });
             captureLlmUsage({
                 useCase: 'track_block',

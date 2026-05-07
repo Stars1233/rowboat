@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { PrefixLogger, trackBlock } from '@x/shared';
-import type { KnowledgeEvent } from '@x/shared/dist/track-block.js';
+import { PrefixLogger, track } from '@x/shared';
+import type { KnowledgeEvent } from '@x/shared/dist/track.js';
 import { WorkDir } from '../../config/config.js';
 import * as workspace from '../../workspace/workspace.js';
 import { fetchAll } from './fileops.js';
@@ -59,10 +59,17 @@ async function listAllTracks(): Promise<ParsedTrack[]> {
             continue;
         }
         for (const t of parsedTracks) {
+            const eventCriteria = (t.track.triggers ?? [])
+                .filter(trig => trig.type === 'event')
+                .map(trig => trig.matchCriteria)
+                .filter(Boolean)
+                .join('; ');
+            // Skip tracks with no event triggers — they're not event-eligible.
+            if (!eventCriteria) continue;
             tracks.push({
-                trackId: t.track.trackId,
+                trackId: t.track.id,
                 filePath,
-                eventMatchCriteria: t.track.eventMatchCriteria ?? '',
+                eventMatchCriteria: eventCriteria,
                 instruction: t.track.instruction,
                 active: t.track.active,
             });
@@ -89,7 +96,7 @@ async function processOneEvent(filename: string): Promise<void> {
     try {
         const raw = fs.readFileSync(pendingPath, 'utf-8');
         const parsed = JSON.parse(raw);
-        event = trackBlock.KnowledgeEventSchema.parse(parsed);
+        event = track.KnowledgeEventSchema.parse(parsed);
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         log.log(`Malformed event ${filename}, moving to done with error:`, msg);

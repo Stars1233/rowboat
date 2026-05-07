@@ -154,7 +154,7 @@ export function BackgroundAgentsView({ onOpenNote, onAddNewBackgroundAgent }: Ba
           </Button>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          Notes that contain track blocks. Toggle a note inactive to pause every background agent in it.
+          Notes that contain tracks. Toggle a note inactive to pause every background agent in it.
         </p>
       </div>
       <div className="flex-1 overflow-auto p-6">

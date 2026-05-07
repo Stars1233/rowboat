@@ -1,5 +1,7 @@
 /* =============================================================
-   Track Modal — dialog overlay for track block details / edits
+   Track sidebar styles. Filename is legacy (predates the modal →
+   sidebar refactor); the .track-modal-* class names are reused by
+   the sidebar's detail-view layout.
    ============================================================= */
 
 .track-modal-content {
@@ -309,3 +311,167 @@
 .track-modal-run-btn:hover {
   background: color-mix(in srgb, var(--track-accent) 85%, black);
 }
+
+/* =============================================================
+   Track sidebar — right panel that lists/edits tracks for the
+   currently-open note. Reuses the .track-modal-* inner styles.
+   ============================================================= */
+
+.track-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, calc(100vw - 2rem));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--background, #fff);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 24px -12px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.track-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  min-height: 48px;
+}
+
+.track-sidebar-back,
+.track-sidebar-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+}
+
+.track-sidebar-back:hover,
+.track-sidebar-close:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.track-sidebar-title {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.track-sidebar-subtitle {
+  font-size: 11px;
+  font-weight: 400;
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-sidebar-list {
+  flex: 1;
+  overflow: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.track-sidebar-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: color-mix(in srgb, var(--foreground) 60%, transparent);
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.track-sidebar-empty-hint {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--foreground) 45%, transparent);
+}
+
+.track-sidebar-row {
+  --track-accent: #64748b;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--track-accent);
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.track-sidebar-row[data-trigger="scheduled"] { --track-accent: #6366f1; }
+.track-sidebar-row[data-trigger="event"]     { --track-accent: #a855f7; }
+.track-sidebar-row[data-trigger="manual"]    { --track-accent: #64748b; }
+.track-sidebar-row[data-active="false"]      { opacity: 0.65; }
+
+.track-sidebar-row:hover {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+
+.track-sidebar-row-icon {
+  color: var(--track-accent);
+  margin-top: 2px;
+}
+
+.track-sidebar-row-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.track-sidebar-row-title {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.track-sidebar-row-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+}
+
+.track-sidebar-row-instruction {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-sidebar-detail {
+  --track-accent: #64748b;
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.track-sidebar-detail[data-trigger="scheduled"] { --track-accent: #6366f1; }
+.track-sidebar-detail[data-trigger="event"]     { --track-accent: #a855f7; }
+.track-sidebar-detail[data-trigger="manual"]    { --track-accent: #64748b; }
+.track-sidebar-detail[data-active="false"]      { --track-accent: color-mix(in srgb, var(--foreground) 30%, transparent); }

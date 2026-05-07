@@ -59,8 +59,8 @@ import { splitFrontmatter, joinFrontmatter } from '@/lib/frontmatter'
 import { extractConferenceLink } from '@/lib/calendar-event'
 import { OnboardingModal } from '@/components/onboarding'
 import { ComposioGoogleMigrationModal } from '@/components/composio-google-migration-modal'
-import { CommandPalette, type CommandPaletteContext, type CommandPaletteMention } from '@/components/search-dialog'
-import { TrackModal } from '@/components/track-modal'
+import { CommandPalette, type CommandPaletteMention } from '@/components/search-dialog'
+import { TrackSidebar } from '@/components/track-sidebar'
 import { BackgroundTaskDetail } from '@/components/background-task-detail'
 import { BrowserPane } from '@/components/browser-pane/BrowserPane'
 import { VersionHistoryPanel } from '@/components/version-history-panel'
@@ -351,20 +351,20 @@ const buildSuggestedTopicExplorePrompt = ({
     'Treat a clear confirmation from me as explicit approval to proceed.',
     `If I confirm later, load the \`tracks\` skill first, check whether a matching note already exists under knowledge/${folder}/, and update it instead of creating a duplicate.`,
     `If no matching note exists, create a new note under knowledge/${folder}/ with an appropriate filename.`,
-    'Use a track block in that note rather than only writing static content, and keep any surrounding note scaffolding short and useful.',
+    'Add a track to the note (a `track:` entry in its frontmatter) rather than only writing static content, and keep any surrounding note scaffolding short and useful.',
     'Do not ask me to choose a note path unless there is a real ambiguity you cannot resolve from the card.',
   ].join('\n')
 }
 
 const buildBackgroundAgentSetupPrompt = () => [
   'Help me set up a background agent.',
-  'In this flow, a background agent is the same thing as a note-based track block. Do not tell me they are separate concepts.',
+  'In this flow, a background agent is the same thing as a track on a note (a `track:` entry in the note frontmatter). Do not tell me they are separate concepts.',
   'Do not propose a separate standalone agent, workflow file, or agent-schedule.json setup unless I explicitly ask for that.',
   'Assume the default home for this setup is knowledge/Tasks/. If that folder does not exist, create it later when setting things up.',
   'Start with a short, plain-English explanation of what a background agent is.',
   'Do not make the explanation too terse.',
   'Give 2 or 3 simple examples of the kinds of things a background agent could help keep updated.',
-  'Do not mention triggers, event-based vs schedule-based behavior, track blocks, skills, note paths, or other internal implementation details unless I ask.',
+  'Do not mention triggers, event-based vs schedule-based behavior, tracks, skills, note paths, or other internal implementation details unless I ask.',
   'In the first reply, tell me that you will create this in my Tasks folder by default.',
   'Do not ask me where it should save or update results unless I explicitly say I want it somewhere else.',
   'Then ask only what I want it to monitor or update and how often I want it to run.',
@@ -874,7 +874,6 @@ function App() {
   // Palette: per-tab editor handles for capturing cursor context on Cmd+K, and pending payload
   // queued across the new-chat-tab state flush before submit fires.
   const editorRefsByTabId = useRef<Map<string, MarkdownEditorHandle>>(new Map())
-  const [paletteContext, setPaletteContext] = useState<CommandPaletteContext | null>(null)
   const [pendingPaletteSubmit, setPendingPaletteSubmit] = useState<{ text: string; mention: CommandPaletteMention | null } | null>(null)
 
   const handleSubmitRecording = useCallback(() => {
@@ -2933,8 +2932,7 @@ function App() {
     setPendingPaletteSubmit(null)
   }, [pendingPaletteSubmit])
 
-  // Listener for track-block "Edit with Copilot" events
-  // (dispatched by apps/renderer/src/extensions/track-block.tsx)
+  // Listener for "Edit with Copilot" events from the track sidebar.
   useEffect(() => {
     const handler = (e: Event) => {
       const ev = e as CustomEvent<{
@@ -3539,16 +3537,11 @@ function App() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleCloseFullScreenChat, isFullScreenChat, expandedFrom, navigateToFullScreenChat])
 
-  // Keyboard shortcut: Cmd+K / Ctrl+K opens the unified palette (defaults to Chat mode).
-  // If an editor tab is currently active, capture cursor context so Chat mode shows the
-  // note + line as a removable chip.
+  // Keyboard shortcut: Cmd+K / Ctrl+K opens the search palette (search-only).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault()
-        const activeId = activeFileTabIdRef.current
-        const handle = activeId ? editorRefsByTabId.current.get(activeId) : null
-        setPaletteContext(handle?.getCursorContext() ?? null)
         setIsSearchOpen(true)
       }
     }
@@ -5090,12 +5083,10 @@ function App() {
           onOpenChange={setIsSearchOpen}
           onSelectFile={navigateToFile}
           onSelectRun={(id) => { void navigateToView({ type: 'chat', runId: id }) }}
-          initialContext={paletteContext}
-          onChatSubmit={submitFromPalette}
         />
       </SidebarSectionProvider>
       <Toaster />
-      <TrackModal />
+      <TrackSidebar />
       <OnboardingModal
         open={showOnboarding}
         onComplete={handleOnboardingComplete}

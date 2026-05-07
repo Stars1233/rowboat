@@ -29,6 +29,7 @@ import {
   FileTextIcon,
   FileIcon,
   FileTypeIcon,
+  Radio,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -42,6 +43,7 @@ interface EditorToolbarProps {
   onSelectionHighlight?: (range: { from: number; to: number } | null) => void
   onImageUpload?: (file: File) => Promise<void> | void
   onExport?: (format: 'md' | 'pdf' | 'docx') => void
+  onOpenTracks?: () => void
 }
 
 export function EditorToolbar({
@@ -49,6 +51,7 @@ export function EditorToolbar({
   onSelectionHighlight,
   onImageUpload,
   onExport,
+  onOpenTracks,
 }: EditorToolbarProps) {
   const [linkUrl, setLinkUrl] = useState('')
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
@@ -384,6 +387,19 @@ export function EditorToolbar({
             </DropdownMenuContent>
           </DropdownMenu>
         </>
+      )}
+
+      {/* Tracks — pushed to far right */}
+      {onOpenTracks && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={onOpenTracks}
+          title="Tracks"
+          className="ml-auto"
+        >
+          <Radio className="size-4" />
+        </Button>
       )}
     </div>
   )
