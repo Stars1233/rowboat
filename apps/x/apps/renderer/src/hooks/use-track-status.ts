@@ -1,6 +1,6 @@
 import z from 'zod';
 import { useSyncExternalStore } from 'react';
-import { TrackEvent } from '@x/shared/dist/track-block.js';
+import { TrackEvent } from '@x/shared/dist/track.js';
 
 export type TrackRunStatus = 'idle' | 'running' | 'done' | 'error';
 
@@ -59,7 +59,7 @@ function getSnapshot(): Map<string, TrackState> {
 /**
  * Returns a Map of all track run states, keyed by "trackId:filePath".
  *
- * Usage in a track block component:
+ * Usage in a track-aware component:
  *   const trackStatus = useTrackStatus();
  *   const state = trackStatus.get(`${trackId}:${filePath}`) ?? { status: 'idle' };
  *

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
 /* Tiptap Editor Styles */
 
 .tiptap-editor {
@@ -654,154 +656,10 @@
   color: color-mix(in srgb, var(--foreground) 38%, transparent);
 }
 /* =============================================================
-   Track Block — inline chip (display-only)
-   The chip just opens a modal (TrackModal). All mutations live in the
-   modal and go through IPC, so the editor never writes track state.
+   (Track inline chip and target-marker styles removed — tracks now
+   live entirely in the note's frontmatter and are managed via the
+   right-side track sidebar.)
    ============================================================= */
-
-.tiptap-editor .ProseMirror .track-block-chip-wrapper {
-  --track-accent: #64748b; /* default: manual/slate */
-  margin: 4px 0;
-  display: inline-block;
-}
-
-.tiptap-editor .ProseMirror .track-block-chip-wrapper[data-trigger="scheduled"] { --track-accent: #6366f1; }
-.tiptap-editor .ProseMirror .track-block-chip-wrapper[data-trigger="event"]     { --track-accent: #a855f7; }
-.tiptap-editor .ProseMirror .track-block-chip-wrapper[data-trigger="manual"]    { --track-accent: #64748b; }
-.tiptap-editor .ProseMirror .track-block-chip-wrapper[data-active="false"]      { --track-accent: color-mix(in srgb, var(--foreground) 30%, transparent); }
-
-.tiptap-editor .ProseMirror .track-block-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  padding: 6px 12px;
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1.3;
-  color: var(--foreground);
-  background: color-mix(in srgb, var(--track-accent) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--track-accent) 35%, transparent);
-  border-left: 3px solid var(--track-accent);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background-color 0.12s ease, box-shadow 0.12s ease, transform 0.06s ease;
-  user-select: none;
-}
-
-.tiptap-editor .ProseMirror .track-block-chip:hover {
-  background: color-mix(in srgb, var(--track-accent) 14%, transparent);
-  box-shadow: 0 1px 4px color-mix(in srgb, var(--track-accent) 20%, transparent);
-}
-
-.tiptap-editor .ProseMirror .track-block-chip:active {
-  transform: translateY(0.5px);
-}
-
-.tiptap-editor .ProseMirror .track-block-chip:focus-visible {
-  outline: 2px solid var(--track-accent);
-  outline-offset: 2px;
-}
-
-.tiptap-editor .ProseMirror .track-block-chip-paused-state {
-  opacity: 0.65;
-}
-
-.tiptap-editor .ProseMirror .track-block-chip-running {
-  box-shadow: 0 0 0 0 color-mix(in srgb, var(--track-accent) 40%, transparent);
-  animation: track-chip-pulse 2s ease-in-out infinite;
-}
-
-@keyframes track-chip-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--track-accent) 35%, transparent); }
-  50%      { box-shadow: 0 0 0 4px color-mix(in srgb, var(--track-accent) 15%, transparent); }
-}
-
-.tiptap-editor .ProseMirror .track-block-chip-icon {
-  flex-shrink: 0;
-  color: var(--track-accent);
-}
-
-.tiptap-editor .ProseMirror .track-block-chip-id {
-  font-weight: 600;
-  color: var(--track-accent);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.tiptap-editor .ProseMirror .track-block-chip-sep {
-  color: color-mix(in srgb, var(--foreground) 25%, transparent);
-  flex-shrink: 0;
-}
-
-.tiptap-editor .ProseMirror .track-block-chip-instruction {
-  color: color-mix(in srgb, var(--foreground) 80%, transparent);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.tiptap-editor .ProseMirror .track-block-chip-paused-label {
-  flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: color-mix(in srgb, var(--foreground) 55%, transparent);
-  background: color-mix(in srgb, var(--foreground) 10%, transparent);
-  padding: 1px 6px;
-  border-radius: 999px;
-}
-
-.tiptap-editor .ProseMirror .track-block-chip-wrapper.ProseMirror-selectednode .track-block-chip {
-  outline: 2px solid var(--track-accent);
-  outline-offset: 2px;
-}
-
-/* =============================================================
-   Track target markers — thin visual bookends around a track's
-   output region. The content BETWEEN these markers is normal,
-   editable document content (rendered by the existing extensions).
-   ============================================================= */
-
-.tiptap-editor .ProseMirror div[data-type="track-target-open"] {
-  position: relative;
-  height: 1px;
-  margin: 14px 0 6px 0;
-  background: color-mix(in srgb, var(--foreground) 15%, transparent);
-  pointer-events: none;
-}
-
-.tiptap-editor .ProseMirror div[data-type="track-target-open"]::before {
-  content: 'track: ' attr(data-track-id);
-  position: absolute;
-  top: -8px;
-  left: 8px;
-  padding: 0 6px;
-  background: var(--background, #fff);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: color-mix(in srgb, var(--foreground) 50%, transparent);
-  text-transform: none;
-  white-space: nowrap;
-  pointer-events: auto;
-}
-
-.tiptap-editor .ProseMirror div[data-type="track-target-close"] {
-  height: 1px;
-  margin: 6px 0 14px 0;
-  background: color-mix(in srgb, var(--foreground) 10%, transparent);
-  pointer-events: none;
-}
-
-.tiptap-editor .ProseMirror div[data-type="track-target-open"].ProseMirror-selectednode,
-.tiptap-editor .ProseMirror div[data-type="track-target-close"].ProseMirror-selectednode {
-  outline: 2px solid color-mix(in srgb, var(--foreground) 30%, transparent);
-  outline-offset: 1px;
-  pointer-events: auto;
-}
 
 /* Shared block styles (image, embed, chart, table) */
 .tiptap-editor .ProseMirror .image-block-wrapper,
@@ -815,6 +673,49 @@
 .tiptap-editor .ProseMirror .mermaid-block-wrapper {
   margin: 8px 0;
 }
+
+/* Consecutive email blocks — zero gap, shared outer border */
+
+/* Kill margins between adjacent email wrappers */
+.tiptap-editor .ProseMirror .email-block-wrapper:has(+ .email-block-wrapper) {
+  margin-bottom: 0;
+}
+.tiptap-editor .ProseMirror .email-block-wrapper + .email-block-wrapper {
+  margin-top: 0;
+}
+
+/* Strip card border/radius from every card inside a sequence */
+.tiptap-editor .ProseMirror .email-block-wrapper:has(+ .email-block-wrapper) .email-block-card,
+.tiptap-editor .ProseMirror .email-block-wrapper + .email-block-wrapper .email-block-card {
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+/* First in group: restore top border + top radius */
+.tiptap-editor .ProseMirror .email-block-wrapper:not(.email-block-wrapper + .email-block-wrapper):has(+ .email-block-wrapper) .email-block-card {
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+/* Last in group: restore bottom border + bottom radius, remove hairline */
+.tiptap-editor .ProseMirror .email-block-wrapper + .email-block-wrapper:not(:has(+ .email-block-wrapper)) .email-block-card {
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+/* Middle cards: just left + right borders */
+.tiptap-editor .ProseMirror .email-block-wrapper + .email-block-wrapper:has(+ .email-block-wrapper) .email-block-card {
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
 
 .tiptap-editor .ProseMirror .image-block-card,
 .tiptap-editor .ProseMirror .embed-block-card,
@@ -1418,141 +1319,209 @@
 
 /* Email block – Gmail style */
 .tiptap-editor .ProseMirror .email-block-card-gmail {
-  background-color: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1), 0 1px 3px 1px rgba(0, 0, 0, 0.06);
+  font-family: 'Google Sans', Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
 }
 
-.tiptap-editor .ProseMirror .email-block-card-gmail:hover {
-  background-color: var(--background);
-}
-
-/* Email badge */
-.tiptap-editor .ProseMirror .email-block-badge {
-  display: inline-flex;
+/* Gmail-style two-column row */
+.tiptap-editor .ProseMirror .email-gmail-row {
+  display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--foreground) 45%, transparent);
-  margin-bottom: 8px;
+  gap: 12px;
+  cursor: pointer;
+  padding: 2px 0;
+  border-radius: 4px;
+  transition: background 0.1s ease;
+  user-select: none;
 }
 
-/* Summary */
-.tiptap-editor .ProseMirror .email-block-summary {
+.tiptap-editor .ProseMirror .email-gmail-row:hover {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+
+.tiptap-editor .ProseMirror .email-gmail-row.email-gmail-row-expanded {
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  margin-bottom: 2px;
+}
+
+/* Sender avatar circle */
+.tiptap-editor .ProseMirror .email-gmail-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 15px;
   font-weight: 500;
-  color: var(--foreground);
-  line-height: 1.4;
-  margin-bottom: 10px;
+  color: #fff;
+  flex-shrink: 0;
+  letter-spacing: 0;
 }
 
-/* Expand button */
-.tiptap-editor .ProseMirror .email-block-expand-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0;
-  font-size: 13px;
-  font-weight: 400;
-  color: color-mix(in srgb, var(--foreground) 50%, transparent);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: color 0.12s ease;
-  margin-bottom: 4px;
-}
-
-.tiptap-editor .ProseMirror .email-block-expand-btn:hover {
-  color: var(--foreground);
-}
-
-.tiptap-editor .ProseMirror .email-block-expand-meta {
-  color: color-mix(in srgb, var(--foreground) 35%, transparent);
-}
-
-.tiptap-editor .ProseMirror .email-block-toggle-chevron {
-  transition: transform 0.15s ease;
-}
-
-.tiptap-editor .ProseMirror .email-block-toggle-chevron-open {
-  transform: rotate(180deg);
-}
-
-/* Email details (expanded) */
-.tiptap-editor .ProseMirror .email-block-email-details {
-  margin-top: 10px;
-  padding: 12px;
-  background: color-mix(in srgb, var(--foreground) 4%, transparent);
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.tiptap-editor .ProseMirror .email-block-message {
-  padding: 0;
-}
-
-.tiptap-editor .ProseMirror .email-block-message-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.tiptap-editor .ProseMirror .email-block-sender-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+/* Content column */
+.tiptap-editor .ProseMirror .email-gmail-content {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   gap: 2px;
 }
 
-.tiptap-editor .ProseMirror .email-block-sender-row {
+.tiptap-editor .ProseMirror .email-gmail-top-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-.tiptap-editor .ProseMirror .email-block-sender-name {
+.tiptap-editor .ProseMirror .email-gmail-sender {
   font-size: 14px;
   font-weight: 500;
+  font-family: 'Google Sans', Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
   color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.tiptap-editor .ProseMirror .email-block-sender-date {
+.tiptap-editor .ProseMirror .email-gmail-date {
   font-size: 12px;
   color: color-mix(in srgb, var(--foreground) 50%, transparent);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.tiptap-editor .ProseMirror .email-block-subject-line {
-  font-size: 12px;
+.tiptap-editor .ProseMirror .email-gmail-bottom-row {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-subject {
+  color: color-mix(in srgb, var(--foreground) 80%, transparent);
+  font-weight: 500;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-snippet {
   color: color-mix(in srgb, var(--foreground) 45%, transparent);
 }
 
-.tiptap-editor .ProseMirror .email-block-message-body {
+/* Chevron */
+.tiptap-editor .ProseMirror .email-gmail-chevron {
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--foreground) 40%, transparent);
+  transition: transform 0.15s ease;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-chevron.email-gmail-chevron-open {
+  transform: rotate(180deg);
+}
+
+/* Expanded area */
+.tiptap-editor .ProseMirror .email-gmail-expanded {
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-exp-subject {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--foreground);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+/* Metadata strip (avatar + from/to/date + open button) */
+.tiptap-editor .ProseMirror .email-gmail-exp-meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-exp-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-exp-meta-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-exp-sender {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.tiptap-editor .ProseMirror .email-gmail-exp-to-date {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--foreground) 50%, transparent);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-exp-fulldate {
+  color: color-mix(in srgb, var(--foreground) 40%, transparent);
+}
+
+.tiptap-editor .ProseMirror .email-gmail-open-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: color-mix(in srgb, var(--foreground) 50%, transparent);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-open-btn:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: var(--foreground);
+}
+
+/* Email body */
+.tiptap-editor .ProseMirror .email-gmail-exp-body {
   font-size: 14px;
   color: color-mix(in srgb, var(--foreground) 80%, transparent);
   white-space: pre-wrap;
-  line-height: 1.58;
+  line-height: 1.6;
+  padding-left: 50px;
 }
 
-.tiptap-editor .ProseMirror .email-block-context-section {
+/* Earlier conversation */
+.tiptap-editor .ProseMirror .email-gmail-exp-history {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--foreground) 10%, transparent);
+  padding-left: 50px;
 }
 
-.tiptap-editor .ProseMirror .email-block-context-label {
+.tiptap-editor .ProseMirror .email-gmail-exp-history-label {
   font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
@@ -1560,68 +1529,88 @@
   color: color-mix(in srgb, var(--foreground) 40%, transparent);
 }
 
-.tiptap-editor .ProseMirror .email-block-context-summary {
-  font-size: 14px;
-  color: color-mix(in srgb, var(--foreground) 65%, transparent);
-  line-height: 1.58;
+.tiptap-editor .ProseMirror .email-gmail-exp-history-body {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  line-height: 1.55;
   white-space: pre-wrap;
   padding-left: 12px;
   border-left: 3px solid color-mix(in srgb, var(--foreground) 12%, transparent);
 }
 
-/* Draft section */
-.tiptap-editor .ProseMirror .email-block-draft-section {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
-  border-radius: 6px;
+/* Compose / draft box */
+.tiptap-editor .ProseMirror .email-gmail-compose {
+  margin-top: 4px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 15%, transparent);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+  overflow: hidden;
 }
 
-.tiptap-editor .ProseMirror .email-block-draft-label {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: color-mix(in srgb, var(--foreground) 40%, transparent);
-  margin-bottom: 4px;
+.tiptap-editor .ProseMirror .email-gmail-compose-to {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
-.tiptap-editor .ProseMirror .email-draft-block-body-input {
+.tiptap-editor .ProseMirror .email-gmail-compose-to-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--foreground) 45%, transparent);
+}
+
+.tiptap-editor .ProseMirror .email-gmail-compose-to-addr {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+}
+
+.tiptap-editor .ProseMirror .email-gmail-compose-body {
   width: 100%;
   font-size: 14px;
   color: var(--foreground);
   background: none;
   border: none;
   outline: none;
-  padding: 4px 0;
+  padding: 10px 12px;
   font-family: inherit;
   line-height: 1.58;
   resize: none;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
-.tiptap-editor .ProseMirror .email-draft-block-body-input::placeholder {
+.tiptap-editor .ProseMirror .email-gmail-compose-body::placeholder {
   color: color-mix(in srgb, var(--foreground) 35%, transparent);
 }
 
-/* Action buttons */
-.tiptap-editor .ProseMirror .email-block-actions {
+.tiptap-editor .ProseMirror .email-gmail-compose-footer {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
-.tiptap-editor .ProseMirror .email-block-gmail-btn {
+/* Action buttons */
+.tiptap-editor .ProseMirror .email-gmail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 50px;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 7px 16px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: color-mix(in srgb, var(--foreground) 60%, transparent);
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
   border-radius: 18px;
   cursor: pointer;
   transition: background-color 0.15s ease, box-shadow 0.15s ease;
@@ -1629,24 +1618,19 @@
   letter-spacing: 0.01em;
 }
 
-.tiptap-editor .ProseMirror .email-block-gmail-btn:hover {
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1), 0 1px 3px 1px rgba(0, 0, 0, 0.06);
+.tiptap-editor .ProseMirror .email-gmail-btn:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
   color: var(--foreground);
 }
 
-.tiptap-editor .ProseMirror .email-block-gmail-btn:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.tiptap-editor .ProseMirror .email-block-gmail-btn-primary {
+.tiptap-editor .ProseMirror .email-gmail-btn-primary {
   color: #fff;
   background: #1a73e8;
   border-color: #1a73e8;
 }
 
-.tiptap-editor .ProseMirror .email-block-gmail-btn-primary:hover:not(:disabled) {
+.tiptap-editor .ProseMirror .email-gmail-btn-primary:hover {
   background: #1765cc;
   box-shadow: 0 1px 2px 0 rgba(26, 115, 232, 0.45), 0 1px 3px 1px rgba(26, 115, 232, 0.3);
   color: #fff;
@@ -1659,6 +1643,167 @@
   gap: 6px;
   color: color-mix(in srgb, var(--foreground) 55%, transparent);
   font-size: 14px;
+}
+
+/* Reply / Forward pill buttons (in expanded view) */
+.tiptap-editor .ProseMirror .email-gmail-reply-row {
+  display: flex;
+  gap: 8px;
+  padding-left: 50px;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-reply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--foreground) 65%, transparent);
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 18px;
+  cursor: pointer;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+  font-family: 'Google Sans', Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
+}
+
+.tiptap-editor .ProseMirror .email-gmail-reply-btn:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  color: var(--foreground);
+}
+
+.tiptap-editor .ProseMirror .email-gmail-reply-row-end {
+  margin-left: auto;
+}
+
+/* ---- Emails inbox block (language-emails) ---- */
+
+.tiptap-editor .ProseMirror .email-inbox-card {
+  font-family: 'Google Sans', Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
+}
+
+.tiptap-editor .ProseMirror .email-inbox-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  letter-spacing: 0.01em;
+}
+
+.tiptap-editor .ProseMirror .email-inbox-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Each email row — hairline separator only, no card */
+.tiptap-editor .ProseMirror .email-inbox-row {
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.tiptap-editor .ProseMirror .email-inbox-row:last-child {
+  border-bottom: none;
+}
+
+.tiptap-editor .ProseMirror .email-inbox-row-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px 7px 0;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  user-select: none;
+  border-radius: 4px;
+}
+
+.tiptap-editor .ProseMirror .email-inbox-row-header:hover {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+.tiptap-editor .ProseMirror .email-inbox-row.email-inbox-row-expanded .email-inbox-row-header {
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+/* Avatar */
+.tiptap-editor .ProseMirror .email-inbox-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* Content column — two-line layout */
+.tiptap-editor .ProseMirror .email-inbox-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tiptap-editor .ProseMirror .email-inbox-top-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tiptap-editor .ProseMirror .email-inbox-sender {
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Google Sans', Roboto, RobotoDraft, Helvetica, Arial, sans-serif;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tiptap-editor .ProseMirror .email-inbox-date {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--foreground) 50%, transparent);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tiptap-editor .ProseMirror .email-inbox-bottom-row {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tiptap-editor .ProseMirror .email-inbox-subject {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.tiptap-editor .ProseMirror .email-inbox-snippet {
+  color: color-mix(in srgb, var(--foreground) 45%, transparent);
+  font-weight: 400;
+}
+
+/* Expand chevron */
+.tiptap-editor .ProseMirror .email-inbox-chevron {
+  flex-shrink: 0;
+  color: color-mix(in srgb, var(--foreground) 35%, transparent);
+  transition: transform 0.15s ease;
+}
+
+.tiptap-editor .ProseMirror .email-inbox-chevron.email-inbox-chevron-open {
+  transform: rotate(180deg);
+}
+
+/* Expanded content padding */
+.tiptap-editor .ProseMirror .email-inbox-expanded-wrap {
+  padding: 8px 0 12px 0;
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 
 /* Transcript block */

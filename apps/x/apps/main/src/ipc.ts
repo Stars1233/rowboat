@@ -34,6 +34,8 @@ import { triggerSync as triggerGranolaSync } from '@x/core/dist/knowledge/granol
 import { ISlackConfigRepo } from '@x/core/dist/slack/repo.js';
 import { isOnboardingComplete, markOnboardingComplete } from '@x/core/dist/config/note_creation_config.js';
 import * as composioHandler from './composio-handler.js';
+import { consumePendingDeepLink } from './deeplink.js';
+import { qualifyAndDisconnectComposioGoogle } from '@x/core/dist/migrations/composio-google-migration.js';
 import { IAgentScheduleRepo } from '@x/core/dist/agent-schedule/repo.js';
 import { IAgentScheduleStateRepo } from '@x/core/dist/agent-schedule/state-repo.js';
 import { triggerRun as triggerAgentScheduleRun } from '@x/core/dist/agent-schedule/runner.js';
@@ -50,9 +52,11 @@ import { getInstallationId } from '@x/core/dist/analytics/installation.js';
 import { API_URL } from '@x/core/dist/config/env.js';
 import {
   fetchYaml,
-  updateTrackBlock,
-  replaceTrackBlockYaml,
-  deleteTrackBlock,
+  listNotesWithTracks,
+  setNoteTracksActive,
+  updateTrack,
+  replaceTrackYaml,
+  deleteTrack,
 } from '@x/core/dist/knowledge/track/fileops.js';
 import { browserIpcHandlers } from './browser/ipc.js';
 
@@ -131,6 +135,14 @@ function resolveShellPath(filePath: string): string {
   }
 
   return workspace.resolveWorkspacePath(filePath);
+}
+
+function toKnowledgeTrackPath(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!normalized.startsWith('knowledge/')) {
+    throw new Error('Track note path must be within knowledge/')
+  }
+  return normalized.slice('knowledge/'.length)
 }
 
 type InvokeChannels = ipc.InvokeChannels;
@@ -417,6 +429,9 @@ export function setupIpcHandlers() {
       // args is null for this channel (no request payload)
       return getVersions();
     },
+    'app:consumePendingDeepLink': async () => {
+      return { url: consumePendingDeepLink() };
+    },
     'analytics:bootstrap': async () => {
       return {
         installationId: getInstallationId(),
@@ -608,11 +623,8 @@ export function setupIpcHandlers() {
     'composio:list-toolkits': async () => {
       return composioHandler.listToolkits();
     },
-    'composio:use-composio-for-google': async () => {
-      return composioHandler.useComposioForGoogle();
-    },
-    'composio:use-composio-for-google-calendar': async () => {
-      return composioHandler.useComposioForGoogleCalendar();
+    'migration:check-composio-google': async () => {
+      return qualifyAndDisconnectComposioGoogle();
     },
     // Agent schedule handlers
     'agent-schedule:getConfig': async () => {
@@ -672,6 +684,19 @@ export function setupIpcHandlers() {
       };
       const mimeType = mimeMap[ext] || 'application/octet-stream';
       return { data: buffer.toString('base64'), mimeType, size: stat.size };
+    },
+    'dialog:openDirectory': async (event, args) => {
+      const win = BrowserWindow.fromWebContents(event.sender);
+      const defaultPath = args.defaultPath ? resolveShellPath(args.defaultPath) : os.homedir();
+      const result = await dialog.showOpenDialog(win!, {
+        title: args.title ?? 'Choose work directory',
+        defaultPath,
+        properties: ['openDirectory', 'createDirectory'],
+      });
+      if (result.canceled || result.filePaths.length === 0) {
+        return { path: null };
+      }
+      return { path: result.filePaths[0] ?? null };
     },
     // Knowledge version history handlers
     'knowledge:history': async (_event, args) => {
@@ -790,12 +815,12 @@ export function setupIpcHandlers() {
     },
     // Track handlers
     'track:run': async (_event, args) => {
-      const result = await triggerTrackUpdate(args.trackId, args.filePath);
+      const result = await triggerTrackUpdate(args.id, args.filePath);
       return { success: !result.error, summary: result.summary ?? undefined, error: result.error };
     },
     'track:get': async (_event, args) => {
       try {
-        const yaml = await fetchYaml(args.filePath, args.trackId);
+        const yaml = await fetchYaml(args.filePath, args.id);
         if (yaml === null) return { success: false, error: 'Track not found' };
         return { success: true, yaml };
       } catch (err) {
@@ -804,8 +829,8 @@ export function setupIpcHandlers() {
     },
     'track:update': async (_event, args) => {
       try {
-        await updateTrackBlock(args.filePath, args.trackId, args.updates as Record<string, unknown>);
-        const yaml = await fetchYaml(args.filePath, args.trackId);
+        await updateTrack(args.filePath, args.id, args.updates as Record<string, unknown>);
+        const yaml = await fetchYaml(args.filePath, args.id);
         if (yaml === null) return { success: false, error: 'Track vanished after update' };
         return { success: true, yaml };
       } catch (err) {
@@ -814,8 +839,8 @@ export function setupIpcHandlers() {
     },
     'track:replaceYaml': async (_event, args) => {
       try {
-        await replaceTrackBlockYaml(args.filePath, args.trackId, args.yaml);
-        const yaml = await fetchYaml(args.filePath, args.trackId);
+        await replaceTrackYaml(args.filePath, args.id, args.yaml);
+        const yaml = await fetchYaml(args.filePath, args.id);
         if (yaml === null) return { success: false, error: 'Track vanished after replace' };
         return { success: true, yaml };
       } catch (err) {
@@ -824,11 +849,24 @@ export function setupIpcHandlers() {
     },
     'track:delete': async (_event, args) => {
       try {
-        await deleteTrackBlock(args.filePath, args.trackId);
+        await deleteTrack(args.filePath, args.id);
         return { success: true };
       } catch (err) {
         return { success: false, error: err instanceof Error ? err.message : String(err) };
       }
+    },
+    'track:setNoteActive': async (_event, args) => {
+      try {
+        const note = await setNoteTracksActive(toKnowledgeTrackPath(args.path), args.active);
+        if (!note) return { success: false, error: 'No tracks found in note' };
+        return { success: true, note };
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
+    'track:listNotes': async () => {
+      const notes = await listNotesWithTracks();
+      return { notes };
     },
     // Billing handler
     'billing:getInfo': async () => {

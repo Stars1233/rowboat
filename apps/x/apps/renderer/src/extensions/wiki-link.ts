@@ -1,5 +1,4 @@
-import { Node, mergeAttributes } from '@tiptap/react'
-import { InputRule, inputRules } from '@tiptap/pm/inputrules'
+import { InputRule, Node, mergeAttributes } from '@tiptap/core'
 import { ensureMarkdownExtension, normalizeWikiPath, wikiLabel } from '@/lib/wiki-links'
 
 const wikiLinkInputRegex = /\[\[([^[\]]+)\]\]$/
@@ -88,13 +87,13 @@ export const WikiLink = Node.create<WikiLinkOptions>({
     return [
       {
         tag: 'wiki-link[data-path]',
-        getAttrs: (element) => ({
+        getAttrs: (element: Element) => ({
           path: (element as HTMLElement).getAttribute('data-path') ?? '',
         }),
       },
       {
         tag: 'a[data-type="wiki-link"]',
-        getAttrs: (element) => ({
+        getAttrs: (element: Element) => ({
           path: (element as HTMLElement).getAttribute('data-path') ?? '',
         }),
       },
@@ -132,23 +131,23 @@ export const WikiLink = Node.create<WikiLinkOptions>({
     }
   },
 
-  addProseMirrorPlugins() {
+  addInputRules() {
     const onCreate = this.options.onCreate
-    const rules = [
-      new InputRule(wikiLinkInputRegex, (state, match, start, end) => {
-        const rawPath = match[1]?.trim()
-        const normalizedPath = rawPath ? normalizeWikiPath(rawPath) : ''
-        if (!normalizedPath || normalizedPath.endsWith('/') || normalizedPath.includes('..')) return null
-        if (state.selection.$from.parent.type.spec.code) return null
-        if (state.selection.$from.marks().some((mark) => mark.type.spec.code)) return null
+    return [
+      new InputRule({
+        find: wikiLinkInputRegex,
+        handler: ({ state, range, match }) => {
+          const rawPath = match[1]?.trim()
+          const normalizedPath = rawPath ? normalizeWikiPath(rawPath) : ''
+          if (!normalizedPath || normalizedPath.endsWith('/') || normalizedPath.includes('..')) return null
+          if (state.selection.$from.parent.type.spec.code) return null
+          if (state.selection.$from.marks().some((mark) => mark.type.spec.code)) return null
 
-        const finalPath = ensureMarkdownExtension(normalizedPath)
-        const tr = state.tr.replaceWith(start, end, this.type.create({ path: finalPath }))
-        onCreate?.(finalPath)
-        return tr
+          const finalPath = ensureMarkdownExtension(normalizedPath)
+          state.tr.replaceWith(range.from, range.to, this.type.create({ path: finalPath }))
+          onCreate?.(finalPath)
+        },
       }),
     ]
-
-    return [inputRules({ rules })]
   },
 })

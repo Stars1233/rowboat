@@ -6,7 +6,7 @@ import { LlmModelConfig } from './models.js';
 import { AgentScheduleConfig, AgentScheduleEntry } from './agent-schedule.js';
 import { AgentScheduleState } from './agent-schedule-state.js';
 import { ServiceEvent } from './service-events.js';
-import { TrackEvent } from './track-block.js';
+import { TrackEvent } from './track.js';
 import { UserMessageContent } from './message.js';
 import { RowboatApiConfig } from './rowboat-account.js';
 import { ZListToolkitsResponse } from './composio.js';
@@ -299,6 +299,28 @@ const ipcSchemas = {
     }),
     res: z.null(),
   },
+  'app:openUrl': {
+    req: z.object({
+      url: z.string(),
+    }),
+    res: z.null(),
+  },
+  'app:takeMeetingNotes': {
+    req: z.object({
+      // Pass the raw calendar event JSON through; renderer adapts to its existing flow.
+      event: z.unknown(),
+      // When true, the renderer should also open the meeting URL (Zoom/Meet/etc.)
+      // in addition to triggering the take-notes flow.
+      openMeeting: z.boolean().optional(),
+    }),
+    res: z.null(),
+  },
+  'app:consumePendingDeepLink': {
+    req: z.null(),
+    res: z.object({
+      url: z.string().nullable(),
+    }),
+  },
   'granola:getConfig': {
     req: z.null(),
     res: z.object({
@@ -407,16 +429,10 @@ const ipcSchemas = {
       toolkits: z.array(z.string()),
     }),
   },
-  'composio:use-composio-for-google': {
+  'migration:check-composio-google': {
     req: z.null(),
     res: z.object({
-      enabled: z.boolean(),
-    }),
-  },
-  'composio:use-composio-for-google-calendar': {
-    req: z.null(),
-    res: z.object({
-      enabled: z.boolean(),
+      shouldShow: z.boolean(),
     }),
   },
   'composio:didConnect': {
@@ -466,6 +482,16 @@ const ipcSchemas = {
   'shell:readFileBase64': {
     req: z.object({ path: z.string() }),
     res: z.object({ data: z.string(), mimeType: z.string(), size: z.number() }),
+  },
+  // Native dialog channels
+  'dialog:openDirectory': {
+    req: z.object({
+      defaultPath: z.string().optional(),
+      title: z.string().optional(),
+    }),
+    res: z.object({
+      path: z.string().nullable(),
+    }),
   },
   // Knowledge version history channels
   'knowledge:history': {
@@ -588,7 +614,7 @@ const ipcSchemas = {
   // Track channels
   'track:run': {
     req: z.object({
-      trackId: z.string(),
+      id: z.string(),
       filePath: z.string(),
     }),
     res: z.object({
@@ -599,22 +625,22 @@ const ipcSchemas = {
   },
   'track:get': {
     req: z.object({
-      trackId: z.string(),
+      id: z.string(),
       filePath: z.string(),
     }),
     res: z.object({
       success: z.boolean(),
-      // Fresh, authoritative YAML of the track block from disk.
-      // Renderer should use this for display/edit — never its Tiptap node attr.
+      // Fresh, authoritative YAML of the track from frontmatter.
+      // Renderer should use this for display/edit — never a stale cached copy.
       yaml: z.string().optional(),
       error: z.string().optional(),
     }),
   },
   'track:update': {
     req: z.object({
-      trackId: z.string(),
+      id: z.string(),
       filePath: z.string(),
-      // Partial TrackBlock updates — merged into the block's YAML on disk.
+      // Partial Track updates — merged into the entry on disk.
       // Backend is the sole writer; avoids races with scheduler/runner writes.
       updates: z.record(z.string(), z.unknown()),
     }),
@@ -626,7 +652,7 @@ const ipcSchemas = {
   },
   'track:replaceYaml': {
     req: z.object({
-      trackId: z.string(),
+      id: z.string(),
       filePath: z.string(),
       yaml: z.string(),
     }),
@@ -638,12 +664,41 @@ const ipcSchemas = {
   },
   'track:delete': {
     req: z.object({
-      trackId: z.string(),
+      id: z.string(),
       filePath: z.string(),
     }),
     res: z.object({
       success: z.boolean(),
       error: z.string().optional(),
+    }),
+  },
+  'track:setNoteActive': {
+    req: z.object({
+      path: RelPath,
+      active: z.boolean(),
+    }),
+    res: z.object({
+      success: z.boolean(),
+      note: z.object({
+        path: RelPath,
+        trackCount: z.number().int().positive(),
+        createdAt: z.string().nullable(),
+        lastRunAt: z.string().nullable(),
+        isActive: z.boolean(),
+      }).optional(),
+      error: z.string().optional(),
+    }),
+  },
+  'track:listNotes': {
+    req: z.null(),
+    res: z.object({
+      notes: z.array(z.object({
+        path: RelPath,
+        trackCount: z.number().int().positive(),
+        createdAt: z.string().nullable(),
+        lastRunAt: z.string().nullable(),
+        isActive: z.boolean(),
+      })),
     }),
   },
   // Embedded browser (WebContentsView) channels

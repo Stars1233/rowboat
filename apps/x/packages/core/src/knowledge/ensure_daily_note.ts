@@ -1,161 +1,154 @@
 import path from 'path';
 import fs from 'fs';
 import { stringify as stringifyYaml } from 'yaml';
-import { TrackBlockSchema } from '@x/shared/dist/track-block.js';
+import { TrackSchema } from '@x/shared/dist/track.js';
 import { WorkDir } from '../config/config.js';
+import { splitFrontmatter } from '../application/lib/parse-frontmatter.js';
 import z from 'zod';
 
 const KNOWLEDGE_DIR = path.join(WorkDir, 'knowledge');
 const DAILY_NOTE_PATH = path.join(KNOWLEDGE_DIR, 'Today.md');
 
-interface Section {
-    heading: string;
-    track: z.infer<typeof TrackBlockSchema>;
-}
+// Bump this whenever the canonical Today.md template changes (TRACKS list,
+// instructions, default body, etc.). On app start, ensureDailyNote() compares
+// the on-disk `templateVersion` against this constant — if older or missing,
+// the existing file is renamed to Today.md.bkp.<ISO-stamp> and replaced with
+// the new template, preserving the body byte-for-byte.
+const CANONICAL_DAILY_NOTE_VERSION = 1;
 
-const SECTIONS: Section[] = [
+// Window triggers below fire once per day, anywhere inside their time-of-day
+// band — so the user opening the app late in the morning still gets the
+// morning run. See schedule-utils.ts for the exact semantics.
+
+const TRACKS: z.infer<typeof TrackSchema>[] = [
     {
-        heading: '## ⏱ Up Next',
-        track: {
-            trackId: 'up-next',
-            instruction:
-`Write 1-3 sentences of plain markdown giving the user a shoulder-tap about what's next on their calendar today.
-
-This section refreshes on calendar changes, not on a clock tick — do NOT promise live minute countdowns. Frame urgency in buckets based on the event's start time relative to now:
-- Start time is in the past or within roughly half an hour → imminent: name the meeting and say it's starting soon (e.g. "Standup is starting — join link in the Calendar section below.").
-- Start time is later this morning or this afternoon → upcoming: name the meeting and roughly when (e.g. "Design review later this morning." / "1:1 with Sam this afternoon.").
-- Start time is several hours out or nothing before then → focus block: frame the gap (e.g. "Next up is the all-hands at 3pm — good long focus block until then.").
-
-Use the event's start time of day ("at 3pm", "this afternoon") rather than a countdown ("in 40 minutes"). Countdowns go stale between syncs.
-
-Data: read today's events from calendar_sync/ (workspace-readdir, then workspace-readFile each .json file). Filter to events whose start datetime is today and hasn't ended yet — for finding the next event, pick the earliest upcoming one; if all have passed, treat as clear.
-
-If you find quick context in knowledge/ that's genuinely useful, add one short clause ("Ramnique pushed the OAuth PR yesterday — might come up"). Use workspace-grep / workspace-readFile conservatively; don't stall on deep research.
-
-If nothing remains today, output exactly: Clear for the rest of the day.
-
-Plain markdown prose only — no calendar block, no email block, no headings.`,
-            eventMatchCriteria:
-`Calendar event changes affecting today — new meetings, reschedules, cancellations, meetings starting soon. Skip changes to events on other days.`,
-            active: true,
-        },
+        id: 'overview',
+        instruction:
+`In a section titled "Overview" at the top of the note: 2–3 prose sentences greeting the user and reading the day (warm, confident tone — use today's calendar density from calendar_sync/ and the existing Priorities section if populated). Below the prose, render exactly one \`image\` block fitting the mood (use weather + calendar density as cues). Source the image via web-search from a permissive host (Unsplash/Pexels/Pixabay/Wikimedia, direct .jpg/.png/.webp URLs only); fall back to NASA APOD (https://apod.nasa.gov/apod/astropix.html) if nothing suitable. Skip the update if the prior content is still suitable and less than 24h old. VERY IMPORTANT: Ensure that image is wide / low-height!`,
+        active: true,
+        triggers: [
+            // Three windows give the user a fresh ranking morning, midday, and
+            // post-lunch even with no events landing in between.
+            { type: 'window', startTime: '08:00', endTime: '12:00' },
+            { type: 'window', startTime: '12:00', endTime: '15:00' },
+            { type: 'window', startTime: '15:00', endTime: '18:00' },
+        ],
     },
     {
-        heading: '## 📅 Calendar',
-        track: {
-            trackId: 'calendar',
-            instruction:
-`Emit today's meetings as a calendar block titled "Today's Meetings".
-
-Data: read calendar_sync/ via workspace-readdir, then workspace-readFile each .json event file. Filter to events occurring today. After 10am local time, drop meetings that have already ended — only include meetings that haven't ended yet.
-
-This section refreshes on calendar changes, not on a clock tick — the "drop ended meetings" rule applies on each refresh, so an ended meeting disappears the next time any calendar event changes (not exactly on the clock hour). That's fine.
-
-Always emit the calendar block, even when there are no remaining events (in that case use events: [] and showJoinButton: false). Set showJoinButton: true whenever any event has a conferenceLink.
-
-After the block, you MAY add one short markdown line per event giving useful prep context pulled from knowledge/ ("Design review: last week we agreed to revisit the type-picker UX."). Keep it tight — one line each, only when meaningful. Skip routine/recurring meetings.`,
-            eventMatchCriteria:
+        id: 'calendar',
+        instruction:
+`In a section titled "Calendar", emit today's meetings as a \`calendar\` block titled "Today's Meetings". Read calendar_sync/ via workspace-readdir → workspace-readFile each .json. Filter to today; after 10am drop meetings that have already ended. Always emit the block (use \`events: []\` when empty). Set \`showJoinButton: true\` if any event has a conferenceLink.`,
+        active: true,
+        triggers: [{
+            type: 'event',
+            matchCriteria:
 `Calendar event changes affecting today — additions, updates, cancellations, reschedules.`,
-            active: true,
-        },
+        }],
     },
     {
-        heading: '## 📧 Emails',
-        track: {
-            trackId: 'emails',
-            instruction:
-`Maintain a digest of email threads worth the user's attention today, rendered as zero or more email blocks (one per thread).
+        id: 'emails',
+        instruction:
+`In a section titled "Emails", maintain a digest of email threads worth attention today. Output everything as a **single** fenced code block with language \`emails\` (plural — never individual \`email\` blocks per thread). The body must be JSON shaped \`{"title":"Today's Emails","emails":[...]}\`.
 
-Event-driven path (primary): the agent message will include a "Gmail sync update" digest payload describing one or more freshly-synced threads from a single sync run. The digest lists each thread with its subject, sender, date, threadId, and body. Iterate over every thread in the payload and decide per thread whether it warrants surfacing. Skip marketing, auto-notifications, closed-out threads, and other low-signal mail. For threads that are attention-worthy, integrate them into the existing digest: add a new email block for a new threadId, or update the existing block if the threadId is already shown. If NONE of the threads in the payload are attention-worthy, skip the update — do NOT call update-track-content. Emit at most one update-track-content call that covers the full set of changes from this event.
+Each entry in the array: \`threadId\`, \`subject\`, \`from\`, \`date\`, \`summary\`, \`latest_email\`. For threads that need a reply, add \`draft_response\` written in the user's voice — direct, informal, no fluff. For FYI threads, omit \`draft_response\`.
 
-Manual path (fallback): with no event payload, scan gmail_sync/ via workspace-readdir (skip sync_state.json and attachments/). Read threads with workspace-readFile. Prioritize threads whose frontmatter action field is "reply" or "respond", plus other high-signal recent threads.
+Skip marketing, auto-notifications, and closed threads. Without an event payload, scan gmail_sync/ via workspace-readdir (skip sync_state.json and attachments/), prioritizing threads with frontmatter action = "reply" or "respond". With an event payload, integrate any qualifying new threads into the existing digest (add a new entry for a new threadId; update the existing entry if the threadId is already shown). Do not re-list threads the user has already seen unless their state changed.
 
-Each email block should include threadId, subject, from, date, summary, and latest_email. For threads that need a reply, add a draft_response written in the user's voice — direct, informal, no fluff. For FYI threads, omit draft_response.
-
-If there is genuinely nothing to surface, output the single line: No new emails.
-
-Do NOT re-list threads the user has already seen unless their state changed (new reply, status flip).`,
-            eventMatchCriteria:
+If nothing qualifies: "No new emails."`,
+        active: true,
+        triggers: [{
+            type: 'event',
+            matchCriteria:
 `New or updated email threads that may need the user's attention today — drafts to send, replies to write, urgent requests, time-sensitive info. Skip marketing, newsletters, auto-notifications, and chatter on closed threads.`,
-            active: true,
-        },
+        }],
     },
     {
-        heading: '## 📰 What You Missed',
-        track: {
-            trackId: 'what-you-missed',
-            instruction:
-`Short markdown summary of what happened yesterday that matters this morning.
-
-Data sources:
-- knowledge/Meetings/<source>/<YYYY-MM-DD>/meeting-<timestamp>.md — use workspace-readdir with recursive: true on knowledge/Meetings, filter for folders matching yesterday's date (compute yesterday from the current local date), read each matching file. Pull out: decisions made, action items assigned, blockers raised, commitments.
-- gmail_sync/ — skim for threads from yesterday that went unresolved or still need a reply.
-
-Skip recurring/routine events (standups, weekly syncs) unless something unusual happened in them.
-
-Write concise markdown — a few bullets or a short paragraph, whichever reads better. Lead with anything that shifts the user's priorities today.
-
-If nothing notable happened, output exactly: Quiet day yesterday — nothing to flag.
-
-Do NOT manufacture content to fill the section.`,
-            active: true,
-            schedule: {
-                type: 'cron',
-                expression: '0 7 * * *',
-            },
-        },
+        id: 'what-you-missed',
+        instruction:
+`In a section titled "What you missed", write a short markdown summary of yesterday's meetings + emails that matter this morning. Pull decisions / action items from knowledge/Meetings/<source>/<yesterday>/ (workspace-readdir recursive on knowledge/Meetings, filter folders matching yesterday's date, read each file). Skim gmail_sync/ for threads that went unresolved. Skip recurring/routine events. If nothing notable: "Quiet day yesterday — nothing to flag."`,
+        active: true,
+        triggers: [
+            // Three windows give the user a fresh ranking morning, midday, and
+            // post-lunch even with no events landing in between.
+            { type: 'window', startTime: '08:00', endTime: '12:00' },
+            { type: 'window', startTime: '12:00', endTime: '15:00' },
+            { type: 'window', startTime: '15:00', endTime: '18:00' },
+        ],
     },
     {
-        heading: '## ✅ Today\'s Priorities',
-        track: {
-            trackId: 'priorities',
-            instruction:
-`Ranked markdown list of the real, actionable items the user should focus on today.
+        id: 'priorities',
+        instruction:
+`In a section titled "Priorities", a ranked markdown list of actionable items the user should focus on today.
 
-Data sources:
-- Yesterday's meeting notes under knowledge/Meetings/<source>/<YYYY-MM-DD>/ — action items assigned to the user are often the most important source.
-- knowledge/ — use workspace-grep for "- [ ]" checkboxes, explicit action items, deadlines, follow-ups.
-- Optional: workspace-readFile on knowledge/Today.md for the current "What You Missed" section — useful for alignment.
+Sources: yesterday's meeting action items (knowledge/Meetings/<source>/<yesterday>/), open follow-ups across knowledge/ (workspace-grep for "- [ ]"), the "What you missed" section.
 
-Rules:
-- Do NOT list calendar events as tasks — they're already in the Calendar section.
-- Do NOT list trivial admin (filing small invoices, archiving spam).
-- Rank by importance. Lead with the most critical item. Note time-sensitivity when it exists ("needs to go out before the 3pm review").
-- Add a brief reason for each item when it's not self-evident.
+Don't list calendar events as tasks (Calendar section has them) and don't list trivial admin. Rank by importance; note time-sensitivity inline.
 
-If nothing genuinely needs attention, output exactly: No pressing tasks today — good day to make progress on bigger items.
+With an event payload (gmail or calendar): re-emit the full list only if the event genuinely shifts priorities (urgent reply, deadline arrival, blocking reschedule). Otherwise skip the update.
 
-Do NOT invent busywork.`,
-            active: true,
-            schedule: {
-                type: 'cron',
-                expression: '30 7 * * *',
+If nothing pressing: "No pressing tasks today — good day to make progress on bigger items."`,
+        active: true,
+        triggers: [
+            // Three windows give the user a fresh ranking morning, midday, and
+            // post-lunch even with no events landing in between.
+            { type: 'window', startTime: '08:00', endTime: '12:00' },
+            { type: 'window', startTime: '12:00', endTime: '15:00' },
+            { type: 'window', startTime: '15:00', endTime: '18:00' },
+            {
+                type: 'event',
+                matchCriteria:
+`New or updated email threads that may shift today's priorities — urgent reply requests, deadline-bearing items, escalations from people the user cares about.`,
             },
-        },
+            {
+                type: 'event',
+                matchCriteria:
+`Calendar changes today that may shift priorities — a meeting moved to clash with a deadline, an unexpected event added, a key meeting cancelled freeing up time.`,
+            },
+        ],
     },
 ];
 
-function buildDailyNoteContent(): string {
-    const parts: string[] = ['# Today', ''];
-    for (const { heading, track } of SECTIONS) {
-        const yaml = stringifyYaml(track, { lineWidth: 0, blockQuote: 'literal' }).trimEnd();
-        parts.push(
-            heading,
-            '',
-            '```track',
-            yaml,
-            '```',
-            '',
-            `<!--track-target:${track.trackId}-->`,
-            `<!--/track-target:${track.trackId}-->`,
-            '',
-        );
-    }
-    return parts.join('\n');
+function buildDailyNoteContent(body: string = '# Today\n'): string {
+    const fm = stringifyYaml(
+        { templateVersion: CANONICAL_DAILY_NOTE_VERSION, track: TRACKS },
+        { lineWidth: 0, blockQuote: 'literal' },
+    ).trimEnd();
+    return `---\n${fm}\n---\n${body}`;
+}
+
+function readCurrentTemplateVersion(): number {
+    if (!fs.existsSync(DAILY_NOTE_PATH)) return -1;
+    const raw = fs.readFileSync(DAILY_NOTE_PATH, 'utf-8');
+    const { frontmatter } = splitFrontmatter(raw);
+    const v = frontmatter.templateVersion;
+    return typeof v === 'number' ? v : 0;
 }
 
 export function ensureDailyNote(): void {
-    if (fs.existsSync(DAILY_NOTE_PATH)) return;
+    // Fresh install — no existing file.
+    if (!fs.existsSync(DAILY_NOTE_PATH)) {
+        fs.writeFileSync(DAILY_NOTE_PATH, buildDailyNoteContent(), 'utf-8');
+        console.log(`[DailyNote] Created Today.md (v${CANONICAL_DAILY_NOTE_VERSION})`);
+        return;
+    }
+
+    // Up-to-date — nothing to do.
+    const currentVersion = readCurrentTemplateVersion();
+    if (currentVersion >= CANONICAL_DAILY_NOTE_VERSION) return;
+
+    // Migrate aggressively: rename existing → backup, write a fresh canonical
+    // template (no body carried over). Today.md is a flagship demo whose
+    // content is meant to be regenerated by the tracks anyway — preserving the
+    // old body just leaves orphan sections behind on rename/restructure. The
+    // .bkp file is the recovery path; its name doesn't end in `.md`, so the
+    // scheduler and event router naturally skip it. Pre-rewrite inline-fence
+    // notes are caught by this same path.
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupPath = `${DAILY_NOTE_PATH}.bkp.${stamp}`;
+    fs.renameSync(DAILY_NOTE_PATH, backupPath);
     fs.writeFileSync(DAILY_NOTE_PATH, buildDailyNoteContent(), 'utf-8');
-    console.log('[DailyNote] Created today.md');
+    console.log(
+        `[DailyNote] Migrated v${currentVersion} → v${CANONICAL_DAILY_NOTE_VERSION}; ` +
+        `previous version saved to ${backupPath}`,
+    );
 }

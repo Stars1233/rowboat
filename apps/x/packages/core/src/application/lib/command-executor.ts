@@ -8,7 +8,6 @@ const execPromise = promisify(exec);
 const COMMAND_SPLIT_REGEX = /(?:\|\||&&|;|\||\n|`|\$\(|\(|\))/;
 const ENV_ASSIGNMENT_REGEX = /^[A-Za-z_][A-Za-z0-9_]*=.*/;
 const WRAPPER_COMMANDS = new Set(['sudo', 'env', 'time', 'command']);
-const EXECUTION_SHELL = getExecutionShell();
 
 function sanitizeToken(token: string): string {
   return token.trim().replace(/^['"()]+|['"()]+$/g, '');
@@ -84,11 +83,12 @@ export async function executeCommand(
   }
 ): Promise<CommandResult> {
   try {
+    const shell = getExecutionShell();
     const { stdout, stderr } = await execPromise(command, {
       cwd: options?.cwd,
       timeout: options?.timeout,
       maxBuffer: options?.maxBuffer || 1024 * 1024, // default 1MB
-      shell: EXECUTION_SHELL,
+      shell,
     });
 
     return {
@@ -143,6 +143,7 @@ export function executeCommandAbortable(
     timeout?: number;
     maxBuffer?: number;
     signal?: AbortSignal;
+    onData?: (chunk: string) => void;
   }
 ): { promise: Promise<AbortableCommandResult>; process: ChildProcess } {
   // Check if already aborted before spawning
@@ -161,8 +162,9 @@ export function executeCommandAbortable(
     };
   }
 
+  const shell = getExecutionShell();
   const proc = spawn(command, [], {
-    shell: EXECUTION_SHELL,
+    shell,
     cwd: options?.cwd,
     detached: process.platform !== 'win32', // Create process group on Unix
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -176,16 +178,20 @@ export function executeCommandAbortable(
 
     // Collect output
     proc.stdout?.on('data', (chunk: Buffer) => {
+      const text = chunk.toString();
       const maxBuffer = options?.maxBuffer || 1024 * 1024;
       if (stdout.length < maxBuffer) {
-        stdout += chunk.toString();
+        stdout += text;
       }
+      options?.onData?.(text);
     });
     proc.stderr?.on('data', (chunk: Buffer) => {
+      const text = chunk.toString();
       const maxBuffer = options?.maxBuffer || 1024 * 1024;
       if (stderr.length < maxBuffer) {
-        stderr += chunk.toString();
+        stderr += text;
       }
+      options?.onData?.(text);
     });
 
     // Abort handler
@@ -272,11 +278,12 @@ export function executeCommandSync(
   }
 ): CommandResult {
   try {
+    const shell = getExecutionShell();
     const stdout = execSync(command, {
       cwd: options?.cwd,
       timeout: options?.timeout,
       encoding: 'utf-8',
-      shell: EXECUTION_SHELL,
+      shell,
     });
 
     return {

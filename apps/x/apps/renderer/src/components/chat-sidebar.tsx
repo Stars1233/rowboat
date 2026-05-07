@@ -16,10 +16,11 @@ import {
   MessageResponse,
 } from '@/components/ai-elements/message'
 import { Shimmer } from '@/components/ai-elements/shimmer'
-import { Tool, ToolContent, ToolHeader, ToolTabbedContent } from '@/components/ai-elements/tool'
+import { Tool, ToolContent, ToolGroupComponent, ToolHeader, ToolTabbedContent } from '@/components/ai-elements/tool'
 import { WebSearchResult } from '@/components/ai-elements/web-search-result'
 import { ComposioConnectCard } from '@/components/ai-elements/composio-connect-card'
 import { PermissionRequest } from '@/components/ai-elements/permission-request'
+import { TerminalOutput } from '@/components/terminal-output'
 import { AskHumanRequest } from '@/components/ai-elements/ask-human-request'
 import { Suggestions } from '@/components/ai-elements/suggestions'
 import { type PromptInputMessage, type FileMention } from '@/components/ai-elements/prompt-input'
@@ -30,6 +31,7 @@ import remarkBreaks from 'remark-breaks'
 import { TabBar, type ChatTab } from '@/components/tab-bar'
 import { ChatInputWithMentions, type StagedAttachment, type SelectedModel } from '@/components/chat-input-with-mentions'
 import { ChatMessageAttachments } from '@/components/chat-message-attachments'
+import { useSidebar } from '@/components/ui/sidebar'
 import { wikiLabel } from '@/lib/wiki-links'
 import {
   type ChatViewportAnchorState,
@@ -40,9 +42,11 @@ import {
   getWebSearchCardData,
   getComposioConnectCardData,
   getToolDisplayName,
+  groupConversationItems,
   isChatMessage,
   isErrorMessage,
   isToolCall,
+  isToolGroup,
   normalizeToolInput,
   normalizeToolOutput,
   parseAttachedFiles,
@@ -55,6 +59,31 @@ const streamdownComponents = { pre: MarkdownPreOverride }
 // round-trip from the input textarea. `remarkBreaks` turns single newlines
 // into <br> so typed line breaks are preserved without requiring blank lines.
 const userMessageRemarkPlugins = [...Object.values(defaultRemarkPlugins), remarkBreaks]
+
+function AutoScrollPre({ className, children }: { className?: string; children: React.ReactNode }) {
+  const ref = useRef<HTMLPreElement>(null)
+  const stickToBottom = useRef(true)
+
+  useEffect(() => {
+    const el = ref.current
+    if (el && stickToBottom.current) {
+      el.scrollTop = el.scrollHeight
+    }
+  }, [children])
+
+  const handleScroll = useCallback(() => {
+    const el = ref.current
+    if (!el) return
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24
+    stickToBottom.current = atBottom
+  }, [])
+
+  return (
+    <pre ref={ref} onScroll={handleScroll} className={className}>
+      {children}
+    </pre>
+  )
+}
 
 /* ─── Billing error helpers ─── */
 
@@ -175,6 +204,7 @@ interface ChatSidebarProps {
   onToolOpenChangeForTab?: (tabId: string, toolId: string, open: boolean) => void
   onOpenKnowledgeFile?: (path: string) => void
   onActivate?: () => void
+  collapsedLeftPaddingPx?: number
   // Voice / TTS props
   isRecording?: boolean
   recordingText?: string
@@ -229,6 +259,7 @@ export function ChatSidebar({
   onToolOpenChangeForTab,
   onOpenKnowledgeFile,
   onActivate,
+  collapsedLeftPaddingPx = 196,
   isRecording,
   recordingText,
   recordingState,
@@ -243,6 +274,7 @@ export function ChatSidebar({
   onTtsModeChange,
   onComposioConnected,
 }: ChatSidebarProps) {
+  const { state: sidebarState } = useSidebar()
   const [width, setWidth] = useState(() => getInitialPaneWidth(defaultWidth))
   const [isResizing, setIsResizing] = useState(false)
   const [showContent, setShowContent] = useState(isOpen)
@@ -446,7 +478,13 @@ export function ChatSidebar({
         >
           <ToolHeader title={toolTitle} type={`tool-${item.name}`} state={toToolState(item.status)} />
           <ToolContent>
-            <ToolTabbedContent input={input} output={output} errorText={errorText} />
+            {item.streamingOutput ? (
+              <AutoScrollPre className="max-h-80 overflow-auto px-4 py-3 font-mono text-xs whitespace-pre-wrap text-foreground/90">
+                <TerminalOutput raw={item.streamingOutput} />
+              </AutoScrollPre>
+            ) : (
+              <ToolTabbedContent input={input} output={output} errorText={errorText} />
+            )}
           </ToolContent>
         </Tool>
       )
@@ -517,7 +555,14 @@ export function ChatSidebar({
 
       {showContent && (
         <>
-          <header className="titlebar-drag-region flex h-10 shrink-0 items-stretch border-b border-border bg-sidebar">
+          <header
+            className="titlebar-drag-region flex h-10 shrink-0 items-stretch border-b border-border bg-sidebar"
+            style={{
+              paddingLeft: isMaximized && sidebarState === 'collapsed' ? collapsedLeftPaddingPx : undefined,
+              paddingRight: isMaximized ? 12 : undefined,
+              transition: isMaximized ? 'padding-left 200ms linear' : undefined,
+            }}
+          >
             <TabBar
               tabs={chatTabs}
               activeTabId={activeChatTabId}
@@ -591,7 +636,20 @@ export function ChatSidebar({
                             </ConversationEmptyState>
                           ) : (
                             <>
-                              {tabState.conversation.map((item) => {
+                              {groupConversationItems(
+                                tabState.conversation,
+                                (id) => !!tabState.allPermissionRequests.get(id)
+                              ).map((item) => {
+                                if (isToolGroup(item)) {
+                                  return (
+                                    <ToolGroupComponent
+                                      key={item.groupId}
+                                      group={item}
+                                      isToolOpen={(toolId) => isToolOpenForTab?.(tab.id, toolId) ?? false}
+                                      onToolOpenChange={(toolId, open) => onToolOpenChangeForTab?.(tab.id, toolId, open)}
+                                    />
+                                  )
+                                }
                                 const rendered = renderConversationItem(item, tab.id)
                                 if (isToolCall(item) && onPermissionResponse) {
                                   const permRequest = tabState.allPermissionRequests.get(item.id)

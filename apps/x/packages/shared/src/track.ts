@@ -1,32 +1,54 @@
 import z from 'zod';
 
-export const TrackScheduleSchema = z.discriminatedUnion('type', [
+// ---------------------------------------------------------------------------
+// Triggers — when a track fires
+// ---------------------------------------------------------------------------
+//
+// A track can carry zero or more triggers under the `triggers:` key.
+// Each trigger is one of:
+//   - cron:   exact time, recurring
+//   - window: once per day, anywhere inside a time-of-day band
+//   - once:   one-shot at a future time
+//   - event:  driven by incoming signals (emails, calendar events, etc.)
+//
+// A track can have multiple triggers — e.g. a daily cron trigger AND an event
+// trigger. Omit `triggers` (or pass an empty array) for a manual-only track.
+// ---------------------------------------------------------------------------
+
+export const TriggerSchema = z.discriminatedUnion('type', [
     z.object({
         type: z.literal('cron').describe('Fires at exact cron times'),
         expression: z.string().describe('5-field cron expression, quoted (e.g. "0 * * * *")'),
     }).describe('Recurring at exact times'),
     z.object({
-        type: z.literal('window').describe('Fires at most once per cron occurrence, only within a time-of-day window'),
-        cron: z.string().describe('5-field cron expression, quoted'),
-        startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).describe('24h HH:MM, local time'),
-        endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).describe('24h HH:MM, local time'),
-    }).describe('Recurring within a time-of-day window'),
+        type: z.literal('window').describe('Fires once per day, anywhere inside a time-of-day band'),
+        startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).describe('24h HH:MM, local time. Also the daily cycle anchor — once the track fires after this time, it won\'t fire again until the next day.'),
+        endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).describe('24h HH:MM, local time. After this, the window is closed for the day.'),
+    }).describe('Recurring within a daily time-of-day window'),
     z.object({
         type: z.literal('once').describe('Fires once and never again'),
         runAt: z.string().describe('ISO 8601 datetime, local time, no Z suffix (e.g. "2026-04-14T09:00:00")'),
     }).describe('One-shot future run'),
-]).describe('Optional schedule. Omit entirely for manual-only tracks.');
+    z.object({
+        type: z.literal('event').describe('Fires when a matching event arrives'),
+        matchCriteria: z.string().describe('Describe the kinds of events that should consider this track for an update (e.g. "Emails about Q3 planning"). Pass 1 routing uses this to decide candidacy; the agent does Pass 2 on the event payload.'),
+    }).describe('Event-driven'),
+]);
 
-export type TrackSchedule = z.infer<typeof TrackScheduleSchema>;
+export type Trigger = z.infer<typeof TriggerSchema>;
 
-export const TrackBlockSchema = z.object({
-    trackId: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).describe('Kebab-case identifier, unique within the note file'),
+// ---------------------------------------------------------------------------
+// Track entity
+// ---------------------------------------------------------------------------
+
+export const TrackSchema = z.object({
+    id: z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).describe('Kebab-case identifier, unique within the note file'),
     instruction: z.string().min(1).describe('What the agent should produce each run — specific, single-focus, imperative'),
-    eventMatchCriteria: z.string().optional().describe('When set, this track participates in event-based triggering. Describe what kinds of events should consider this track for an update (e.g. "Emails about Q3 planning"). Omit to disable event triggers — the track will only run on schedule or manually.'),
     active: z.boolean().default(true).describe('Set false to pause without deleting'),
-    schedule: TrackScheduleSchema.optional(),
+    triggers: z.array(TriggerSchema).optional().describe('When this track fires. A track can have multiple triggers — e.g. an hourly cron AND an event trigger. Omit (or use an empty array) for a manual-only track.'),
     model: z.string().optional().describe('ADVANCED — leave unset. Per-track LLM model override (e.g. "anthropic/claude-sonnet-4.6"). Only set when the user explicitly asked for a specific model for THIS track. The global default already picks a tuned model for tracks; overriding usually makes things worse, not better.'),
     provider: z.string().optional().describe('ADVANCED — leave unset. Per-track provider name override (e.g. "openai", "anthropic"). Only set when the user explicitly asked for a specific provider for THIS track. Almost always omitted; the global default flows through correctly.'),
+    icon: z.string().optional().describe('Lucide icon name for status display (e.g. "clock", "calendar-days", "mail", "history", "list-todo"). Omit to use the default icon for this track.'),
     lastRunAt: z.string().optional().describe('Runtime-managed — never write this yourself'),
     lastRunId: z.string().optional().describe('Runtime-managed — never write this yourself'),
     lastRunSummary: z.string().optional().describe('Runtime-managed — never write this yourself'),
@@ -58,7 +80,7 @@ export type KnowledgeEvent = z.infer<typeof KnowledgeEventSchema>;
 
 export const Pass1OutputSchema = z.object({
     candidates: z.array(z.object({
-        trackId: z.string().describe('The track block identifier'),
+        trackId: z.string().describe('The track identifier'),
         filePath: z.string().describe('The note file path the track lives in'),
     })).describe('Tracks that may be relevant to this event. trackIds are only unique within a file, so always return both fields.'),
 });
@@ -85,5 +107,5 @@ export const TrackRunCompleteEvent = z.object({
 
 export const TrackEvent = z.union([TrackRunStartEvent, TrackRunCompleteEvent]);
 
-export type TrackBlock = z.infer<typeof TrackBlockSchema>;
+export type Track = z.infer<typeof TrackSchema>;
 export type TrackEventType = z.infer<typeof TrackEvent>;
