@@ -37,10 +37,9 @@ export function PersistentViewerCache({ activePath }: PersistentViewerCacheProps
   useEffect(() => {
     if (!isCacheable(activePath)) return
     setMountedPaths((prev) => {
-      if (prev.includes(activePath)) {
-        // Move to most-recent position
-        return [...prev.filter((p) => p !== activePath), activePath]
-      }
+      // Never reorder existing entries — moving a keyed iframe in the DOM
+      // detaches it, which causes the browser to re-navigate (state lost).
+      if (prev.includes(activePath)) return prev
       const next = [...prev, activePath]
       return next.length > CACHE_LIMIT ? next.slice(-CACHE_LIMIT) : next
     })
