@@ -6,7 +6,7 @@ import { LlmModelConfig } from './models.js';
 import { AgentScheduleConfig, AgentScheduleEntry } from './agent-schedule.js';
 import { AgentScheduleState } from './agent-schedule-state.js';
 import { ServiceEvent } from './service-events.js';
-import { TrackEvent } from './track-block.js';
+import { TrackEvent } from './track.js';
 import { UserMessageContent } from './message.js';
 import { RowboatApiConfig } from './rowboat-account.js';
 import { ZListToolkitsResponse } from './composio.js';
@@ -614,7 +614,7 @@ const ipcSchemas = {
   // Track channels
   'track:run': {
     req: z.object({
-      trackId: z.string(),
+      id: z.string(),
       filePath: z.string(),
     }),
     res: z.object({
@@ -625,22 +625,22 @@ const ipcSchemas = {
   },
   'track:get': {
     req: z.object({
-      trackId: z.string(),
+      id: z.string(),
       filePath: z.string(),
     }),
     res: z.object({
       success: z.boolean(),
-      // Fresh, authoritative YAML of the track block from disk.
-      // Renderer should use this for display/edit — never its Tiptap node attr.
+      // Fresh, authoritative YAML of the track from frontmatter.
+      // Renderer should use this for display/edit — never a stale cached copy.
       yaml: z.string().optional(),
       error: z.string().optional(),
     }),
   },
   'track:update': {
     req: z.object({
-      trackId: z.string(),
+      id: z.string(),
       filePath: z.string(),
-      // Partial TrackBlock updates — merged into the block's YAML on disk.
+      // Partial Track updates — merged into the entry on disk.
       // Backend is the sole writer; avoids races with scheduler/runner writes.
       updates: z.record(z.string(), z.unknown()),
     }),
@@ -652,7 +652,7 @@ const ipcSchemas = {
   },
   'track:replaceYaml': {
     req: z.object({
-      trackId: z.string(),
+      id: z.string(),
       filePath: z.string(),
       yaml: z.string(),
     }),
@@ -664,7 +664,7 @@ const ipcSchemas = {
   },
   'track:delete': {
     req: z.object({
-      trackId: z.string(),
+      id: z.string(),
       filePath: z.string(),
     }),
     res: z.object({

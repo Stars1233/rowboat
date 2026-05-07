@@ -1,7 +1,7 @@
 export const skill = String.raw`
 # Notify User
 
-Load this skill when you need to send a desktop notification to the user — e.g. after a long-running task completes, when a track block detects something noteworthy, or when an agent wants to ping the user with a clickable result.
+Load this skill when you need to send a desktop notification to the user — e.g. after a long-running task completes, when a track detects something noteworthy, or when an agent wants to ping the user with a clickable result.
 
 ## When to use
 - **Use it for**: completion alerts, threshold breaches, status changes, new items the user asked you to watch for, anything time-sensitive.
@@ -62,7 +62,7 @@ The \`type=file\` path is workspace-relative (the same path you'd pass to \`work
 
 ## Anti-patterns
 - **Don't notify per step** of a multi-step task. Notify on completion, not on progress.
-- **Don't repeat what's already on screen.** If the result is already in the chat or in a track block the user is viewing, skip the notification.
+- **Don't repeat what's already on screen.** If the result is already in the chat or in a note the user is viewing, skip the notification.
 - **Don't dump the result into \`message\`.** Surface the headline; put the detail behind a deep link or external link.
 - **Don't notify silently-failing things either.** If something failed, say so in the message — don't swallow the failure into a generic "done".
 `;

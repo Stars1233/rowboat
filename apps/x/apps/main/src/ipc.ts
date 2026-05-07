@@ -54,9 +54,9 @@ import {
   fetchYaml,
   listNotesWithTracks,
   setNoteTracksActive,
-  updateTrackBlock,
-  replaceTrackBlockYaml,
-  deleteTrackBlock,
+  updateTrack,
+  replaceTrackYaml,
+  deleteTrack,
 } from '@x/core/dist/knowledge/track/fileops.js';
 import { browserIpcHandlers } from './browser/ipc.js';
 
@@ -815,12 +815,12 @@ export function setupIpcHandlers() {
     },
     // Track handlers
     'track:run': async (_event, args) => {
-      const result = await triggerTrackUpdate(args.trackId, args.filePath);
+      const result = await triggerTrackUpdate(args.id, args.filePath);
       return { success: !result.error, summary: result.summary ?? undefined, error: result.error };
     },
     'track:get': async (_event, args) => {
       try {
-        const yaml = await fetchYaml(args.filePath, args.trackId);
+        const yaml = await fetchYaml(args.filePath, args.id);
         if (yaml === null) return { success: false, error: 'Track not found' };
         return { success: true, yaml };
       } catch (err) {
@@ -829,8 +829,8 @@ export function setupIpcHandlers() {
     },
     'track:update': async (_event, args) => {
       try {
-        await updateTrackBlock(args.filePath, args.trackId, args.updates as Record<string, unknown>);
-        const yaml = await fetchYaml(args.filePath, args.trackId);
+        await updateTrack(args.filePath, args.id, args.updates as Record<string, unknown>);
+        const yaml = await fetchYaml(args.filePath, args.id);
         if (yaml === null) return { success: false, error: 'Track vanished after update' };
         return { success: true, yaml };
       } catch (err) {
@@ -839,8 +839,8 @@ export function setupIpcHandlers() {
     },
     'track:replaceYaml': async (_event, args) => {
       try {
-        await replaceTrackBlockYaml(args.filePath, args.trackId, args.yaml);
-        const yaml = await fetchYaml(args.filePath, args.trackId);
+        await replaceTrackYaml(args.filePath, args.id, args.yaml);
+        const yaml = await fetchYaml(args.filePath, args.id);
         if (yaml === null) return { success: false, error: 'Track vanished after replace' };
         return { success: true, yaml };
       } catch (err) {
@@ -849,7 +849,7 @@ export function setupIpcHandlers() {
     },
     'track:delete': async (_event, args) => {
       try {
-        await deleteTrackBlock(args.filePath, args.trackId);
+        await deleteTrack(args.filePath, args.id);
         return { success: true };
       } catch (err) {
         return { success: false, error: err instanceof Error ? err.message : String(err) };
@@ -858,7 +858,7 @@ export function setupIpcHandlers() {
     'track:setNoteActive': async (_event, args) => {
       try {
         const note = await setNoteTracksActive(toKnowledgeTrackPath(args.path), args.active);
-        if (!note) return { success: false, error: 'No track blocks found in note' };
+        if (!note) return { success: false, error: 'No tracks found in note' };
         return { success: true, note };
       } catch (err) {
         return { success: false, error: err instanceof Error ? err.message : String(err) };

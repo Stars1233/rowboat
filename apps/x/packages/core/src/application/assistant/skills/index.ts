@@ -104,7 +104,7 @@ const definitions: SkillDefinition[] = [
   {
     id: "tracks",
     title: "Tracks",
-    summary: "Create and manage track blocks — YAML-scheduled auto-updating content blocks in notes (weather, news, prices, status, dashboards). Insert at cursor (Cmd+K) or append to notes.",
+    summary: "Create and manage tracks — frontmatter directives that keep a note's body auto-updated on a schedule, on incoming events, or manually (weather, news, prices, status, dashboards).",
     content: tracksSkill,
   },
   {
