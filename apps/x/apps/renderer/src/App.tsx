@@ -14,6 +14,7 @@ import { ChatMessageAttachments } from '@/components/chat-message-attachments'
 import { GraphView, type GraphEdge, type GraphNode } from '@/components/graph-view';
 import { BasesView, type BaseConfig, DEFAULT_BASE_CONFIG } from '@/components/bases-view';
 import { HtmlFileViewer } from '@/components/html-file-viewer';
+import { ImageFileViewer } from '@/components/image-file-viewer';
 import { useDebounce } from './hooks/use-debounce';
 import { SidebarContentPanel } from '@/components/sidebar-content';
 import { SuggestedTopicsView } from '@/components/suggested-topics-view';
@@ -1425,9 +1426,10 @@ function App() {
     }
     const requestId = (fileLoadRequestIdRef.current += 1)
     const pathToLoad = selectedPath
-    // HtmlFileViewer self-loads (with size check, error states, etc.)
-    // Skip the generic loader so we don't double-fetch large files.
-    if (pathToLoad.toLowerCase().endsWith('.html') || pathToLoad.toLowerCase().endsWith('.htm')) {
+    // Media viewers (HTML, image, video, PDF) self-load via app:// protocol.
+    // Skip the generic UTF-8 loader so we don't trash fileContent with binary
+    // bytes or double-fetch large files.
+    if (/\.(html?|png|jpe?g|webp|gif|svg|avif|bmp|ico|mp4|mov|webm|m4v|pdf)$/i.test(pathToLoad)) {
       setFileContent('')
       return
     }
@@ -4829,6 +4831,10 @@ function App() {
                 ) : selectedPath?.toLowerCase().endsWith('.html') || selectedPath?.toLowerCase().endsWith('.htm') ? (
                   <div className="flex-1 min-h-0 overflow-hidden">
                     <HtmlFileViewer path={selectedPath} />
+                  </div>
+                ) : selectedPath && /\.(png|jpe?g|webp|gif|svg|avif|bmp|ico)$/i.test(selectedPath) ? (
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <ImageFileViewer path={selectedPath} />
                   </div>
                 ) : (
                   <div className="flex-1 overflow-auto p-4">

@@ -31,6 +31,7 @@ import { shutdown as shutdownAnalytics } from "@x/core/dist/analytics/posthog.js
 import { identifyIfSignedIn } from "@x/core/dist/analytics/identify.js";
 
 import { initConfigs } from "@x/core/dist/config/initConfigs.js";
+import { resolveWorkspacePath } from "@x/core/dist/workspace/workspace.js";
 import started from "electron-squirrel-startup";
 import { execSync, exec, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
@@ -133,16 +134,29 @@ const rendererPath = app.isPackaged
   : path.join(__dirname, "../../../renderer/dist"); // Development
 console.log("rendererPath", rendererPath);
 
-// Register custom protocol for serving built renderer files in production.
-// This keeps SPA routes working when users deep link into the packaged app.
+// Register custom protocol for serving built renderer files in production
+// AND for serving local workspace files to the renderer (images, PDFs, video).
+//
+//   app://workspace/<rel-path>  → workspace file (path-traversal guarded)
+//   app://<anything-else>/...   → renderer SPA (existing behavior)
 function registerAppProtocol() {
   protocol.handle("app", (request) => {
     const url = new URL(request.url);
 
-    // url.pathname starts with "/"
-    let urlPath = url.pathname;
+    // Workspace files: app://workspace/<rel-path>
+    if (url.host === "workspace") {
+      try {
+        const relPath = decodeURIComponent(url.pathname).replace(/^\/+/, "");
+        if (!relPath) return new Response("Not Found", { status: 404 });
+        const absPath = resolveWorkspacePath(relPath);
+        return net.fetch(pathToFileURL(absPath).toString());
+      } catch {
+        return new Response("Forbidden", { status: 403 });
+      }
+    }
 
-    // If it's "/" or a SPA route (no extension), serve index.html
+    // Renderer SPA — existing logic
+    let urlPath = url.pathname;
     if (urlPath === "/" || !path.extname(urlPath)) {
       urlPath = "/index.html";
     }
@@ -161,8 +175,8 @@ protocol.registerSchemesAsPrivileged([
       supportFetchAPI: true,
       corsEnabled: true,
       allowServiceWorkers: true,
-      // optional but often helpful:
-      // stream: true,
+      // Required for byte-range requests so <video> seeking works.
+      stream: true,
     },
   },
 ]);
@@ -251,10 +265,10 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  // Register custom protocol before creating window (for production builds)
-  if (app.isPackaged) {
-    registerAppProtocol();
-  }
+  // Register custom protocol before creating window.
+  // In production this serves the renderer SPA; in dev (and prod) it also
+  // serves workspace files via app://workspace/<rel-path> for media previews.
+  registerAppProtocol();
 
   // Initialize auto-updater (only in production)
   if (app.isPackaged) {
