@@ -293,9 +293,16 @@ export class GoogleClientFactory {
      * Rowboat OAuth2Client — no client_id/secret, no refresh_token.
      * Library auto-refresh is disabled by absence of refresh_token; our
      * proactive refresh in getClient() is the only refresh path.
+     *
+     * eagerRefreshThresholdMillis must be 0: the library defaults to a
+     * 5-minute window where it preemptively refreshes any token nearing
+     * expiry. Without a refresh_token on the client, that path throws
+     * "No refresh token is set." and the API call fails — even though
+     * our proactive refresh would have handled it on the next tick.
      */
     private static createRowboatClient(tokens: OAuthTokens): OAuth2Client {
         const client = new OAuth2Client();
+        client.eagerRefreshThresholdMillis = 0;
         client.setCredentials({
             access_token: tokens.access_token,
             expiry_date: tokens.expires_at * 1000,
