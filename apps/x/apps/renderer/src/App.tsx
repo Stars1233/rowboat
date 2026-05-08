@@ -17,7 +17,8 @@ import { ImageFileViewer } from '@/components/image-file-viewer';
 import { VideoFileViewer } from '@/components/video-file-viewer';
 import { AudioFileViewer } from '@/components/audio-file-viewer';
 import { PersistentViewerCache } from '@/components/persistent-viewer-cache';
-import { getViewerType, isMediaPath, isCacheableViewerPath } from '@/lib/file-types';
+import { UnsupportedFileViewer } from '@/components/unsupported-file-viewer';
+import { getViewerType, isCacheableViewerPath } from '@/lib/file-types';
 import { useDebounce } from './hooks/use-debounce';
 import { SidebarContentPanel } from '@/components/sidebar-content';
 import { SuggestedTopicsView } from '@/components/suggested-topics-view';
@@ -1429,10 +1430,10 @@ function App() {
     }
     const requestId = (fileLoadRequestIdRef.current += 1)
     const pathToLoad = selectedPath
-    // Media viewers (HTML, image, video, audio, PDF) self-load via app:// protocol.
-    // Skip the generic UTF-8 loader so we don't trash fileContent with binary
-    // bytes or double-fetch large files.
-    if (isMediaPath(pathToLoad)) {
+    // Only the markdown editor still consumes fileContent. Every other viewer
+    // (media + UnsupportedFileViewer) self-loads, so skip the generic UTF-8
+    // loader to avoid double-fetching and to avoid slurping binary bytes.
+    if (!pathToLoad.endsWith('.md')) {
       setFileContent('')
       return
     }
@@ -4853,10 +4854,8 @@ function App() {
                     <AudioFileViewer path={selectedPath} />
                   </div>
                 ) : (
-                  <div className="flex-1 overflow-auto p-4">
-                    <pre className="text-sm font-mono text-foreground whitespace-pre-wrap">
-                      {fileContent || 'Loading...'}
-                    </pre>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <UnsupportedFileViewer path={selectedPath} />
                   </div>
                 )
                 )}
