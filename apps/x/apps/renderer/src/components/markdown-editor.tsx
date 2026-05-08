@@ -290,7 +290,9 @@ function computeWithinBlockOffset(
       return 0
   }
 }
-import { EditorToolbar } from './editor-toolbar'
+import { EditorToolbar, type LivePillState } from './editor-toolbar'
+import { useLiveNoteForPath } from '@/hooks/use-live-note-for-path'
+import { formatRelativeTime } from '@/lib/relative-time'
 import { FrontmatterProperties } from './frontmatter-properties'
 import { WikiLink } from '@/extensions/wiki-link'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
@@ -1422,6 +1424,26 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     return createImageUploadHandler(editor, onImageUpload)
   }, [editor, onImageUpload])
 
+  // Live-note pill state for the toolbar — derived from the on-disk `live:`
+  // block plus the agent-status bus. The `tick` dependency keeps the relative
+  // time label fresh as minutes roll over.
+  const { live: currentLive, isRunning: liveIsRunning, tick: liveTick } = useLiveNoteForPath(notePath)
+  const livePillStateForCurrentNote: LivePillState = useMemo(() => {
+    void liveTick // re-run on tick to refresh relative-time label
+    if (!currentLive) return { variant: 'passive', label: 'Make live' }
+    if (liveIsRunning) return { variant: 'running', label: 'Updating…' }
+    if (currentLive.lastRunError) {
+      const when = currentLive.lastAttemptAt ? formatRelativeTime(currentLive.lastAttemptAt) : ''
+      return { variant: 'error', label: when ? `Live · failed ${when}` : 'Live · failed' }
+    }
+    if (currentLive.active === false) return { variant: 'passive', label: 'Live · paused' }
+    if (currentLive.lastRunAt) {
+      const when = formatRelativeTime(currentLive.lastRunAt)
+      return { variant: 'idle', label: when ? `Live · ${when}` : 'Live' }
+    }
+    return { variant: 'idle', label: 'Live · never run' }
+  }, [currentLive, liveIsRunning, liveTick])
+
   return (
     <div className="tiptap-editor" onKeyDown={handleKeyDown}>
       <EditorToolbar
@@ -1429,11 +1451,12 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         onSelectionHighlight={setSelectionHighlight}
         onImageUpload={handleImageUploadWithPlaceholder}
         onExport={onExport}
-        onOpenTracks={notePath ? () => {
-          window.dispatchEvent(new CustomEvent('rowboat:open-track-sidebar', {
+        onOpenLiveNote={notePath ? () => {
+          window.dispatchEvent(new CustomEvent('rowboat:open-live-note-panel', {
             detail: { filePath: notePath },
           }))
         } : undefined}
+        liveState={notePath ? livePillStateForCurrentNote : undefined}
       />
       {(frontmatter !== undefined) && onFrontmatterChange && (
         <FrontmatterProperties

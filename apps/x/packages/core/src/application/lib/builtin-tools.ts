@@ -1550,25 +1550,24 @@ export const BuiltinTools: z.infer<typeof BuiltinToolsSchema> = {
         },
         isAvailable: async () => isComposioConfigured(),
     },
-    'run-track': {
-        description: "Manually trigger a track to run now on its host note. Equivalent to the user clicking the Run button on the track in the sidebar, but you can pass extra `context` to bias what the track agent does this run — most useful for backfills (e.g. seeding a new email-tracking track from existing synced emails) or focused refreshes. Returns the action taken, summary, and the new note body.",
+    'run-live-note-agent': {
+        description: "Manually trigger the live-note agent to run now on a note. Equivalent to the user clicking the Run button in the live-note sidebar, but you can pass extra `context` to bias what the agent does this run — most useful for backfills (e.g. seeding a newly-made-live note from existing synced emails) or focused refreshes. Returns the action taken, summary, and the new note body.",
         inputSchema: z.object({
-            filePath: z.string().describe("Workspace-relative path to the note file (e.g., 'knowledge/Notes/my-note.md')"),
-            id: z.string().describe("The track's id (must exist in the note's frontmatter `track:` array)"),
+            filePath: z.string().describe("Workspace-relative path to the note file (e.g., 'knowledge/Notes/my-note.md'). The note must already have a `live:` block in its frontmatter."),
             context: z.string().optional().describe(
-                "Optional extra context for the track agent to consider for THIS run only — does not modify the track's instruction. " +
+                "Optional extra context for the live-note agent to consider for THIS run only — does not modify the note's objective. " +
                 "Use it to drive backfills (e.g. 'Backfill from existing synced emails in gmail_sync/ from the last 90 days about this topic') " +
                 "or focused refreshes (e.g. 'Focus on changes from the last 7 days'). " +
                 "Omit for a plain refresh."
             ),
         }),
-        execute: async ({ filePath, id, context }: { filePath: string; id: string; context?: string }) => {
+        execute: async ({ filePath, context }: { filePath: string; context?: string }) => {
             const knowledgeRelativePath = filePath.replace(/^knowledge\//, '');
             try {
                 // Lazy import to break a module-init cycle:
-                // builtin-tools → track/runner → runs/runs → agents/runtime → builtin-tools
-                const { triggerTrackUpdate } = await import("../../knowledge/track/runner.js");
-                const result = await triggerTrackUpdate(id, knowledgeRelativePath, context, 'manual');
+                // builtin-tools → live-note/runner → runs/runs → agents/runtime → builtin-tools
+                const { runLiveNoteAgent } = await import("../../knowledge/live-note/runner.js");
+                const result = await runLiveNoteAgent(knowledgeRelativePath, 'manual', context);
                 return {
                     success: !result.error,
                     runId: result.runId,

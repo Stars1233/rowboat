@@ -43,7 +43,21 @@ interface EditorToolbarProps {
   onSelectionHighlight?: (range: { from: number; to: number } | null) => void
   onImageUpload?: (file: File) => Promise<void> | void
   onExport?: (format: 'md' | 'pdf' | 'docx') => void
-  onOpenTracks?: () => void
+  onOpenLiveNote?: () => void
+  liveState?: LivePillState
+}
+
+export type LivePillVariant = 'passive' | 'idle' | 'running' | 'error'
+export interface LivePillState {
+  variant: LivePillVariant
+  label: string
+}
+
+const LIVE_PILL_VARIANT_CLASS: Record<LivePillVariant, string> = {
+  passive: 'text-muted-foreground hover:bg-accent',
+  idle: 'text-foreground hover:bg-accent',
+  running: 'text-foreground bg-primary/10 hover:bg-primary/15 animate-pulse',
+  error: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/15',
 }
 
 export function EditorToolbar({
@@ -51,7 +65,8 @@ export function EditorToolbar({
   onSelectionHighlight,
   onImageUpload,
   onExport,
-  onOpenTracks,
+  onOpenLiveNote,
+  liveState,
 }: EditorToolbarProps) {
   const [linkUrl, setLinkUrl] = useState('')
   const [isLinkPopoverOpen, setIsLinkPopoverOpen] = useState(false)
@@ -389,17 +404,17 @@ export function EditorToolbar({
         </>
       )}
 
-      {/* Tracks — pushed to far right */}
-      {onOpenTracks && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={onOpenTracks}
-          title="Tracks"
-          className="ml-auto"
+      {/* Live Note pill — pushed to far right */}
+      {onOpenLiveNote && liveState && (
+        <button
+          type="button"
+          onClick={onOpenLiveNote}
+          title={liveState.variant === 'passive' ? 'Make this note live' : 'Live note'}
+          className={`ml-auto inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors ${LIVE_PILL_VARIANT_CLASS[liveState.variant]}`}
         >
-          <Radio className="size-4" />
-        </Button>
+          <Radio className="size-3.5" />
+          <span className="truncate max-w-[160px]">{liveState.label}</span>
+        </button>
       )}
     </div>
   )

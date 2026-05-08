@@ -7,7 +7,7 @@ import { WorkDir } from '../config/config.js';
 import { GoogleClientFactory } from './google-client-factory.js';
 import { serviceLogger } from '../services/service_logger.js';
 import { limitEventItems } from './limit_event_items.js';
-import { createEvent } from './track/events.js';
+import { createEvent } from './live-note/events.js';
 
 const MAX_EVENTS_IN_DIGEST = 50;
 const MAX_DESCRIPTION_CHARS = 500;

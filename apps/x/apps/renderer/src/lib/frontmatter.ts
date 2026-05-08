@@ -139,12 +139,12 @@ export function extractFrontmatterFields(raw: string | null): FrontmatterFields 
  * re-emitted by buildFrontmatter (callers must splice them back from the
  * original raw if they want to preserve them on save — see the helpers below).
  */
-const STRUCTURED_KEYS = new Set(['track'])
+const STRUCTURED_KEYS = new Set(['live'])
 
 /**
  * Extract editable top-level YAML key/value pairs from raw frontmatter.
  * Returns a flat record where scalar values are strings and list-of-string
- * values are string[]. Structured keys (e.g. `track:`) and any nested-object
+ * values are string[]. Structured keys (e.g. `live:`) and any nested-object
  * shapes are filtered out — they are not editable via this surface.
  */
 export function extractAllFrontmatterValues(raw: string | null): Record<string, string | string[]> {
@@ -189,7 +189,7 @@ export function extractAllFrontmatterValues(raw: string | null): Record<string, 
     if (itemMatch) {
       const item = itemMatch[1].trim()
       // If the list-item line itself contains a `key: value` pair, this is a
-      // nested-object shape (e.g. `- id: chicago-time` under `track:`). We
+      // nested-object shape (e.g. `- startTime: "09:00"` under a windows list). We
       // can't represent that as a flat string array — drop the whole key.
       if (/^\w[\w\s]*\w?:\s*\S/.test(item)) {
         delete result[currentKey]
@@ -212,7 +212,7 @@ export function extractAllFrontmatterValues(raw: string | null): Record<string, 
 /**
  * Convert a Record of editable frontmatter fields back to a raw YAML
  * frontmatter string. If `preserveRaw` is provided, structured keys (e.g.
- * `track:`) are spliced back from the original raw byte-for-byte, so
+ * `live:`) are spliced back from the original raw byte-for-byte, so
  * round-trips through the FrontmatterProperties UI never lose them.
  */
 export function buildFrontmatter(
@@ -235,7 +235,7 @@ export function buildFrontmatter(
     }
   }
 
-  // Splice preserved structured-key blocks (e.g. track:) back from preserveRaw.
+  // Splice preserved structured-key blocks (e.g. live:) back from preserveRaw.
   const preservedBlocks: string[] = []
   if (preserveRaw) {
     for (const key of STRUCTURED_KEYS) {

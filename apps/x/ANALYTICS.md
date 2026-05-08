@@ -22,7 +22,7 @@ Emitted whenever ai-sdk returns token usage (one event per LLM call, not per run
 
 | Property | Type | Notes |
 |---|---|---|
-| `use_case` | enum | `copilot_chat` / `track_block` / `meeting_note` / `knowledge_sync` |
+| `use_case` | enum | `copilot_chat` / `live_note_agent` / `meeting_note` / `knowledge_sync` |
 | `sub_use_case` | string? | Refines `use_case` — see taxonomy table below |
 | `agent_name` | string? | Present when the call goes through an agent run (`createRun`); omitted for direct `generateText`/`generateObject` |
 | `model` | string | e.g. `claude-sonnet-4-6` |
@@ -42,8 +42,11 @@ Every `llm_usage` emit point in the codebase:
 | `copilot_chat` | (none) | yes | User chat in renderer (default for any `createRun` without `useCase`) | `packages/core/src/agents/runtime.ts:1313` (finish-step in `streamLlm`) |
 | `copilot_chat` | `scheduled` | yes | Background scheduled agent runner | `packages/core/src/agent-schedule/runner.ts:167` |
 | `copilot_chat` | `file_parse` | inherits | `parseFile` builtin tool inside any chat | `packages/core/src/application/lib/builtin-tools.ts:770` |
-| `track_block` | `routing` | no | Pass 1 routing classifier (`generateObject`) | `packages/core/src/knowledge/track/routing.ts:104` |
-| `track_block` | `run` | yes | Pass 2 track block execution | `packages/core/src/knowledge/track/runner.ts:109` (createRun) |
+| `live_note_agent` | `routing` | no | Pass 1 routing classifier (`generateObject`) | `packages/core/src/knowledge/live-note/routing.ts:93` |
+| `live_note_agent` | `manual` | yes | Pass 2 agent run — user clicked Run / called the `run-live-note-agent` tool | `packages/core/src/knowledge/live-note/runner.ts:140` (createRun, `subUseCase: trigger`) |
+| `live_note_agent` | `cron` | yes | Pass 2 agent run — cron expression matched | same call site |
+| `live_note_agent` | `window` | yes | Pass 2 agent run — fired inside a configured time-of-day window | same call site |
+| `live_note_agent` | `event` | yes | Pass 2 agent run — Pass 1 routing flagged the note for an incoming event | same call site |
 | `meeting_note` | (none) | no | Meeting transcript summarizer (`generateText`) | `packages/core/src/knowledge/summarize_meeting.ts:161` |
 | `knowledge_sync` | `agent_notes` | yes | Agent notes learning service | `packages/core/src/knowledge/agent_notes.ts:309` (createRun) |
 | `knowledge_sync` | `tag_notes` | yes | Note tagging | `packages/core/src/knowledge/tag_notes.ts:86` (createRun) |
@@ -52,6 +55,15 @@ Every `llm_usage` emit point in the codebase:
 | `knowledge_sync` | `inline_task_run` | yes | Inline `@rowboat` task execution (two call sites) | `packages/core/src/knowledge/inline_tasks.ts:471, 552` (createRun) |
 | `knowledge_sync` | `inline_task_classify` | no | Inline task scheduling classifier (`generateText`) | `packages/core/src/knowledge/inline_tasks.ts:673` |
 | `knowledge_sync` | `pre_built` | yes | Pre-built scheduled agents | `packages/core/src/pre_built/runner.ts:43` (createRun) |
+
+##### `live_note_agent` sub-use-case shape
+
+For the live-note feature specifically, `sub_use_case` discriminates **what kind of work happened**:
+
+- `routing` — Pass 1 LLM classifier deciding which live notes might be relevant to an incoming event. One emit per Pass 1 batch.
+- `manual` / `cron` / `window` / `event` — Pass 2 agent run, tagged with the trigger that woke it up. The runner reads its `trigger` argument (`LiveNoteTriggerType`) and passes it directly as `subUseCase`, so dashboards can break runs down by trigger source.
+
+This means a single end-to-end event flow emits both `routing` (Pass 1) and `event` (Pass 2). A scheduled cron fire emits only `cron`. A user clicking Run emits only `manual`. There is no separate "run" sub-use-case anymore — the trigger IS the sub-use-case for Pass 2.
 
 `testModelConnection` in `packages/core/src/models/models.ts` is **not** instrumented (diagnostic only — would skew per-model counts).
 

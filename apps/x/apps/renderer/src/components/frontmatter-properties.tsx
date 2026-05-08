@@ -46,7 +46,7 @@ export function FrontmatterProperties({ raw, onRawChange, editable = true }: Fro
 
   const commit = useCallback((updated: FieldEntry[]) => {
     // Use the latest raw seen as the preserve-source so structured keys
-    // (like `track:`) survive a round-trip through this UI.
+    // (like `live:`) survive a round-trip through this UI.
     const newRaw = fieldsToRaw(updated, raw ?? lastCommittedRaw.current)
     lastCommittedRaw.current = newRaw
     onRawChange(newRaw)

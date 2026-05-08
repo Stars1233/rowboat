@@ -22,5 +22,5 @@ export const LlmModelConfig = z.object({
   // the curated gateway defaults). Read by helpers in core/models/defaults.ts.
   knowledgeGraphModel: z.string().optional(),
   meetingNotesModel: z.string().optional(),
-  trackBlockModel: z.string().optional(),
+  liveNoteAgentModel: z.string().optional(),
 });

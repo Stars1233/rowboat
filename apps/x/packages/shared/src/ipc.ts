@@ -6,7 +6,7 @@ import { LlmModelConfig } from './models.js';
 import { AgentScheduleConfig, AgentScheduleEntry } from './agent-schedule.js';
 import { AgentScheduleState } from './agent-schedule-state.js';
 import { ServiceEvent } from './service-events.js';
-import { TrackEvent } from './track.js';
+import { LiveNoteAgentEvent, LiveNoteSchema } from './live-note.js';
 import { UserMessageContent } from './message.js';
 import { RowboatApiConfig } from './rowboat-account.js';
 import { ZListToolkitsResponse } from './composio.js';
@@ -214,8 +214,8 @@ const ipcSchemas = {
     req: ServiceEvent,
     res: z.null(),
   },
-  'tracks:events': {
-    req: TrackEvent,
+  'live-note-agent:events': {
+    req: LiveNoteAgentEvent,
     res: z.null(),
   },
   'models:list': {
@@ -611,93 +611,83 @@ const ipcSchemas = {
       response: z.string().nullable(),
     }),
   },
-  // Track channels
-  'track:run': {
+  // Live-note channels
+  'live-note:run': {
     req: z.object({
-      id: z.string(),
+      filePath: z.string(),
+      context: z.string().optional(),
+    }),
+    res: z.object({
+      success: z.boolean(),
+      runId: z.string().nullable().optional(),
+      action: z.enum(['replace', 'no_update']).optional(),
+      summary: z.string().nullable().optional(),
+      contentAfter: z.string().nullable().optional(),
+      error: z.string().optional(),
+    }),
+  },
+  'live-note:get': {
+    req: z.object({
       filePath: z.string(),
     }),
     res: z.object({
       success: z.boolean(),
-      summary: z.string().optional(),
+      // Fresh, authoritative live-note object from frontmatter, or null when
+      // the note is passive. Renderer should use this for display/edit —
+      // never a stale cached copy.
+      live: LiveNoteSchema.nullable().optional(),
       error: z.string().optional(),
     }),
   },
-  'track:get': {
+  'live-note:set': {
     req: z.object({
-      id: z.string(),
       filePath: z.string(),
+      live: LiveNoteSchema,
     }),
     res: z.object({
       success: z.boolean(),
-      // Fresh, authoritative YAML of the track from frontmatter.
-      // Renderer should use this for display/edit — never a stale cached copy.
-      yaml: z.string().optional(),
+      live: LiveNoteSchema.nullable().optional(),
       error: z.string().optional(),
     }),
   },
-  'track:update': {
+  'live-note:setActive': {
     req: z.object({
-      id: z.string(),
       filePath: z.string(),
-      // Partial Track updates — merged into the entry on disk.
-      // Backend is the sole writer; avoids races with scheduler/runner writes.
-      updates: z.record(z.string(), z.unknown()),
-    }),
-    res: z.object({
-      success: z.boolean(),
-      yaml: z.string().optional(),
-      error: z.string().optional(),
-    }),
-  },
-  'track:replaceYaml': {
-    req: z.object({
-      id: z.string(),
-      filePath: z.string(),
-      yaml: z.string(),
-    }),
-    res: z.object({
-      success: z.boolean(),
-      yaml: z.string().optional(),
-      error: z.string().optional(),
-    }),
-  },
-  'track:delete': {
-    req: z.object({
-      id: z.string(),
-      filePath: z.string(),
-    }),
-    res: z.object({
-      success: z.boolean(),
-      error: z.string().optional(),
-    }),
-  },
-  'track:setNoteActive': {
-    req: z.object({
-      path: RelPath,
       active: z.boolean(),
     }),
     res: z.object({
       success: z.boolean(),
-      note: z.object({
-        path: RelPath,
-        trackCount: z.number().int().positive(),
-        createdAt: z.string().nullable(),
-        lastRunAt: z.string().nullable(),
-        isActive: z.boolean(),
-      }).optional(),
+      live: LiveNoteSchema.nullable().optional(),
       error: z.string().optional(),
     }),
   },
-  'track:listNotes': {
+  'live-note:delete': {
+    req: z.object({
+      filePath: z.string(),
+    }),
+    res: z.object({
+      success: z.boolean(),
+      error: z.string().optional(),
+    }),
+  },
+  'live-note:stop': {
+    req: z.object({
+      filePath: z.string(),
+    }),
+    res: z.object({
+      success: z.boolean(),
+      error: z.string().optional(),
+    }),
+  },
+  'live-note:listNotes': {
     req: z.null(),
     res: z.object({
       notes: z.array(z.object({
         path: RelPath,
-        trackCount: z.number().int().positive(),
         createdAt: z.string().nullable(),
         lastRunAt: z.string().nullable(),
         isActive: z.boolean(),
+        objective: z.string(),
       })),
     }),
   },

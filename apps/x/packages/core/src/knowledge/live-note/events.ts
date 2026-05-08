@@ -1,12 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import { PrefixLogger, track } from '@x/shared';
-import type { KnowledgeEvent } from '@x/shared/dist/track.js';
+import { PrefixLogger, liveNote } from '@x/shared';
+import type { KnowledgeEvent } from '@x/shared/dist/live-note.js';
 import { WorkDir } from '../../config/config.js';
 import * as workspace from '../../workspace/workspace.js';
-import { fetchAll } from './fileops.js';
-import { triggerTrackUpdate } from './runner.js';
-import { findCandidates, type ParsedTrack } from './routing.js';
+import { fetchLiveNote } from './fileops.js';
+import { runLiveNoteAgent } from './runner.js';
+import { findCandidates, type ParsedLiveNote } from './routing.js';
 import type { IMonotonicallyIncreasingIdGenerator } from '../../application/lib/id-gen.js';
 import container from '../../di/container.js';
 
@@ -15,7 +15,7 @@ const EVENTS_DIR = path.join(WorkDir, 'events');
 const PENDING_DIR = path.join(EVENTS_DIR, 'pending');
 const DONE_DIR = path.join(EVENTS_DIR, 'done');
 
-const log = new PrefixLogger('EventProcessor');
+const log = new PrefixLogger('LiveNote:Events');
 
 /**
  * Write a KnowledgeEvent to the events/pending/ directory.
@@ -39,43 +39,38 @@ function ensureDirs(): void {
     fs.mkdirSync(DONE_DIR, { recursive: true });
 }
 
-async function listAllTracks(): Promise<ParsedTrack[]> {
-    const tracks: ParsedTrack[] = [];
+async function listEventEligibleLiveNotes(): Promise<ParsedLiveNote[]> {
+    const out: ParsedLiveNote[] = [];
     let entries;
     try {
         entries = await workspace.readdir('knowledge', { recursive: true });
     } catch {
-        return tracks;
+        return out;
     }
     const mdFiles = entries
         .filter(e => e.kind === 'file' && e.name.endsWith('.md'))
         .map(e => e.path.replace(/^knowledge\//, ''));
 
     for (const filePath of mdFiles) {
-        let parsedTracks;
+        let live;
         try {
-            parsedTracks = await fetchAll(filePath);
+            live = await fetchLiveNote(filePath);
         } catch {
             continue;
         }
-        for (const t of parsedTracks) {
-            const eventCriteria = (t.track.triggers ?? [])
-                .filter(trig => trig.type === 'event')
-                .map(trig => trig.matchCriteria)
-                .filter(Boolean)
-                .join('; ');
-            // Skip tracks with no event triggers — they're not event-eligible.
-            if (!eventCriteria) continue;
-            tracks.push({
-                trackId: t.track.id,
-                filePath,
-                eventMatchCriteria: eventCriteria,
-                instruction: t.track.instruction,
-                active: t.track.active,
-            });
-        }
+        if (!live) continue;
+        if (live.active === false) continue;
+
+        const eventMatchCriteria = live.triggers?.eventMatchCriteria;
+        if (!eventMatchCriteria) continue; // not event-eligible
+
+        out.push({
+            filePath,
+            objective: live.objective,
+            eventMatchCriteria,
+        });
     }
-    return tracks;
+    return out;
 }
 
 function moveEventToDone(filename: string, enriched: KnowledgeEvent): void {
@@ -85,7 +80,7 @@ function moveEventToDone(filename: string, enriched: KnowledgeEvent): void {
     try {
         fs.unlinkSync(pendingPath);
     } catch (err) {
-        log.log(`Failed to remove pending event ${filename}:`, err);
+        log.log(`failed to remove pending event ${filename}: ${err instanceof Error ? err.message : String(err)}`);
     }
 }
 
@@ -96,10 +91,10 @@ async function processOneEvent(filename: string): Promise<void> {
     try {
         const raw = fs.readFileSync(pendingPath, 'utf-8');
         const parsed = JSON.parse(raw);
-        event = track.KnowledgeEventSchema.parse(parsed);
+        event = liveNote.KnowledgeEventSchema.parse(parsed);
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        log.log(`Malformed event ${filename}, moving to done with error:`, msg);
+        log.log(`event:${filename} — malformed, moving to done with error: ${msg}`);
         const stub: KnowledgeEvent = {
             id: filename.replace(/\.json$/, ''),
             source: 'unknown',
@@ -113,36 +108,48 @@ async function processOneEvent(filename: string): Promise<void> {
         return;
     }
 
-    log.log(`Processing event ${event.id} (source=${event.source}, type=${event.type})`);
+    log.log(`event:${event.id} — received source=${event.source} type=${event.type}`);
 
-    const allTracks = await listAllTracks();
-    const candidates = await findCandidates(event, allTracks);
+    const eligible = await listEventEligibleLiveNotes();
+    const candidates = await findCandidates(event, eligible);
+
+    if (candidates.length === 0) {
+        log.log(`event:${event.id} — no candidates (${eligible.length} eligible note${eligible.length === 1 ? '' : 's'})`);
+    } else {
+        log.log(`event:${event.id} — dispatching to ${candidates.length} candidate${candidates.length === 1 ? '' : 's'}: ${candidates.map(c => c.filePath).join(', ')}`);
+    }
 
     const runIds: string[] = [];
     let processingError: string | undefined;
+    let okCount = 0;
+    let errCount = 0;
 
     // Sequential — preserves total ordering
     for (const candidate of candidates) {
         try {
-            const result = await triggerTrackUpdate(
-                candidate.trackId,
-                candidate.filePath,
-                event.payload,
-                'event',
-            );
+            const result = await runLiveNoteAgent(candidate.filePath, 'event', event.payload);
             if (result.runId) runIds.push(result.runId);
-            log.log(`Candidate ${candidate.trackId}: ${result.action}${result.error ? ` (${result.error})` : ''}`);
+            if (result.error) {
+                errCount++;
+            } else {
+                okCount++;
+            }
         } catch (err) {
+            errCount++;
             const msg = err instanceof Error ? err.message : String(err);
-            log.log(`Error triggering candidate ${candidate.trackId}:`, msg);
-            processingError = (processingError ? processingError + '; ' : '') + `${candidate.trackId}: ${msg}`;
+            log.log(`event:${event.id} — candidate ${candidate.filePath} threw: ${msg}`);
+            processingError = (processingError ? processingError + '; ' : '') + `${candidate.filePath}: ${msg}`;
         }
+    }
+
+    if (candidates.length > 0) {
+        log.log(`event:${event.id} — processed ok=${okCount} errors=${errCount}`);
     }
 
     const enriched: KnowledgeEvent = {
         ...event,
         processedAt: new Date().toISOString(),
-        candidates: candidates.map(c => ({ trackId: c.trackId, filePath: c.filePath })),
+        candidateFilePaths: candidates.map(c => c.filePath),
         runIds,
         ...(processingError ? { error: processingError } : {}),
     };
@@ -157,7 +164,7 @@ async function processPendingEvents(): Promise<void> {
     try {
         filenames = fs.readdirSync(PENDING_DIR).filter(f => f.endsWith('.json'));
     } catch (err) {
-        log.log('Failed to read pending dir:', err);
+        log.log(`failed to read pending dir: ${err instanceof Error ? err.message : String(err)}`);
         return;
     }
 
@@ -166,23 +173,24 @@ async function processPendingEvents(): Promise<void> {
     // FIFO: monotonic IDs are lexicographically sortable
     filenames.sort();
 
-    log.log(`Processing ${filenames.length} pending event(s)`);
+    if (filenames.length > 1) {
+        log.log(`tick — ${filenames.length} pending events`);
+    }
 
     for (const filename of filenames) {
         try {
             await processOneEvent(filename);
         } catch (err) {
-            log.log(`Unhandled error processing ${filename}:`, err);
+            log.log(`event:${filename} — unhandled error: ${err instanceof Error ? err.message : String(err)}`);
             // Keep the loop alive — don't move file, will retry on next tick
         }
     }
 }
 
 export async function init(): Promise<void> {
-    log.log(`Starting, polling every ${POLL_INTERVAL_MS / 1000}s`);
+    log.log(`starting, polling every ${POLL_INTERVAL_MS / 1000}s`);
     ensureDirs();
 
-    // Initial run
     await processPendingEvents();
 
     while (true) {
@@ -190,7 +198,7 @@ export async function init(): Promise<void> {
         try {
             await processPendingEvents();
         } catch (err) {
-            log.log('Error in main loop:', err);
+            log.log(`tick error: ${err instanceof Error ? err.message : String(err)}`);
         }
     }
 }
