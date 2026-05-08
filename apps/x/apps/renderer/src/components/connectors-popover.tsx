@@ -79,16 +79,7 @@ export function ConnectorsPopover({ children, tooltip, open: openProp, onOpenCha
             <Button
               variant="default"
               size="sm"
-              onClick={() => {
-                if (provider === 'google') {
-                  c.setGoogleClientIdDescription(
-                    "To keep your Google account connected, please re-enter your client ID. You only need to do this once."
-                  )
-                  c.setGoogleClientIdOpen(true)
-                  return
-                }
-                c.startConnect(provider)
-              }}
+              onClick={() => c.handleReconnect(provider)}
               className="h-7 px-2 text-xs"
             >
               Reconnect

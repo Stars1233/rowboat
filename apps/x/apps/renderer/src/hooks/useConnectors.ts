@@ -354,6 +354,25 @@ export function useConnectors(active: boolean) {
     startConnect('google', { clientId, clientSecret })
   }, [startConnect])
 
+  // Reconnect flow used by the "Reconnect" button. Mirrors handleConnect's
+  // rowboat-vs-BYOK branching for Google so signed-in users don't get the
+  // client-ID modal — they just re-run the managed-credentials browser flow.
+  const handleReconnect = useCallback(async (provider: string) => {
+    if (provider === 'google') {
+      const isSignedIntoRowboat = providerStates.rowboat?.isConnected ?? false
+      if (isSignedIntoRowboat) {
+        await startConnect('google')
+        return
+      }
+      setGoogleClientIdDescription(
+        "To keep your Google account connected, please re-enter your client ID. You only need to do this once."
+      )
+      setGoogleClientIdOpen(true)
+      return
+    }
+    await startConnect(provider)
+  }, [startConnect, providerStates])
+
   const handleDisconnect = useCallback(async (provider: string) => {
     setProviderStates(prev => ({
       ...prev,
@@ -534,6 +553,7 @@ export function useConnectors(active: boolean) {
     providerStatus,
     hasProviderError,
     handleConnect,
+    handleReconnect,
     handleDisconnect,
     startConnect,
 
