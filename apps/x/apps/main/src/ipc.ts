@@ -46,18 +46,17 @@ import { getBillingInfo } from '@x/core/dist/billing/billing.js';
 import { summarizeMeeting } from '@x/core/dist/knowledge/summarize_meeting.js';
 import { getAccessToken } from '@x/core/dist/auth/tokens.js';
 import { getRowboatConfig } from '@x/core/dist/config/rowboat.js';
-import { triggerTrackUpdate } from '@x/core/dist/knowledge/track/runner.js';
-import { trackBus } from '@x/core/dist/knowledge/track/bus.js';
+import { runLiveNoteAgent } from '@x/core/dist/knowledge/live-note/runner.js';
+import { liveNoteBus } from '@x/core/dist/knowledge/live-note/bus.js';
 import { getInstallationId } from '@x/core/dist/analytics/installation.js';
 import { API_URL } from '@x/core/dist/config/env.js';
 import {
-  fetchYaml,
-  listNotesWithTracks,
-  setNoteTracksActive,
-  updateTrack,
-  replaceTrackYaml,
-  deleteTrack,
-} from '@x/core/dist/knowledge/track/fileops.js';
+  fetchLiveNote,
+  setLiveNote,
+  setLiveNoteActive,
+  deleteLiveNote,
+  listLiveNotes,
+} from '@x/core/dist/knowledge/live-note/fileops.js';
 import { browserIpcHandlers } from './browser/ipc.js';
 
 /**
@@ -135,14 +134,6 @@ function resolveShellPath(filePath: string): string {
   }
 
   return workspace.resolveWorkspacePath(filePath);
-}
-
-function toKnowledgeTrackPath(filePath: string): string {
-  const normalized = filePath.replace(/\\/g, '/').replace(/^\/+/, '');
-  if (!normalized.startsWith('knowledge/')) {
-    throw new Error('Track note path must be within knowledge/')
-  }
-  return normalized.slice('knowledge/'.length)
 }
 
 type InvokeChannels = ipc.InvokeChannels;
@@ -385,14 +376,14 @@ export async function startServicesWatcher(): Promise<void> {
   });
 }
 
-let tracksWatcher: (() => void) | null = null;
-export function startTracksWatcher(): void {
-  if (tracksWatcher) return;
-  tracksWatcher = trackBus.subscribe((event) => {
+let liveNoteAgentWatcher: (() => void) | null = null;
+export function startLiveNoteAgentWatcher(): void {
+  if (liveNoteAgentWatcher) return;
+  liveNoteAgentWatcher = liveNoteBus.subscribe((event) => {
     const windows = BrowserWindow.getAllWindows();
     for (const win of windows) {
       if (!win.isDestroyed() && win.webContents) {
-        win.webContents.send('tracks:events', event);
+        win.webContents.send('live-note-agent:events', event);
       }
     }
   });
@@ -813,59 +804,66 @@ export function setupIpcHandlers() {
     'voice:synthesize': async (_event, args) => {
       return voice.synthesizeSpeech(args.text);
     },
-    // Track handlers
-    'track:run': async (_event, args) => {
-      const result = await triggerTrackUpdate(args.id, args.filePath);
-      return { success: !result.error, summary: result.summary ?? undefined, error: result.error };
+    // Live-note handlers
+    'live-note:run': async (_event, args) => {
+      const result = await runLiveNoteAgent(args.filePath, 'manual', args.context);
+      return {
+        success: !result.error,
+        runId: result.runId,
+        action: result.action,
+        summary: result.summary,
+        contentAfter: result.contentAfter,
+        error: result.error,
+      };
     },
-    'track:get': async (_event, args) => {
+    'live-note:get': async (_event, args) => {
       try {
-        const yaml = await fetchYaml(args.filePath, args.id);
-        if (yaml === null) return { success: false, error: 'Track not found' };
-        return { success: true, yaml };
+        const live = await fetchLiveNote(args.filePath);
+        return { success: true, live };
       } catch (err) {
         return { success: false, error: err instanceof Error ? err.message : String(err) };
       }
     },
-    'track:update': async (_event, args) => {
+    'live-note:set': async (_event, args) => {
       try {
-        await updateTrack(args.filePath, args.id, args.updates as Record<string, unknown>);
-        const yaml = await fetchYaml(args.filePath, args.id);
-        if (yaml === null) return { success: false, error: 'Track vanished after update' };
-        return { success: true, yaml };
+        await setLiveNote(args.filePath, args.live);
+        const live = await fetchLiveNote(args.filePath);
+        return { success: true, live };
       } catch (err) {
         return { success: false, error: err instanceof Error ? err.message : String(err) };
       }
     },
-    'track:replaceYaml': async (_event, args) => {
+    'live-note:setActive': async (_event, args) => {
       try {
-        await replaceTrackYaml(args.filePath, args.id, args.yaml);
-        const yaml = await fetchYaml(args.filePath, args.id);
-        if (yaml === null) return { success: false, error: 'Track vanished after replace' };
-        return { success: true, yaml };
+        await setLiveNoteActive(args.filePath, args.active);
+        const live = await fetchLiveNote(args.filePath);
+        return { success: true, live };
       } catch (err) {
         return { success: false, error: err instanceof Error ? err.message : String(err) };
       }
     },
-    'track:delete': async (_event, args) => {
+    'live-note:delete': async (_event, args) => {
       try {
-        await deleteTrack(args.filePath, args.id);
+        await deleteLiveNote(args.filePath);
         return { success: true };
       } catch (err) {
         return { success: false, error: err instanceof Error ? err.message : String(err) };
       }
     },
-    'track:setNoteActive': async (_event, args) => {
+    'live-note:stop': async (_event, args) => {
       try {
-        const note = await setNoteTracksActive(toKnowledgeTrackPath(args.path), args.active);
-        if (!note) return { success: false, error: 'No tracks found in note' };
-        return { success: true, note };
+        const live = await fetchLiveNote(args.filePath);
+        if (!live?.lastRunId) {
+          return { success: false, error: 'No active run for this note' };
+        }
+        await runsCore.stop(live.lastRunId, false);
+        return { success: true };
       } catch (err) {
         return { success: false, error: err instanceof Error ? err.message : String(err) };
       }
     },
-    'track:listNotes': async () => {
-      const notes = await listNotesWithTracks();
+    'live-note:listNotes': async () => {
+      const notes = await listLiveNotes();
       return { notes };
     },
     // Billing handler

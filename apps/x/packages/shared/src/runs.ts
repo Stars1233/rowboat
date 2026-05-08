@@ -25,7 +25,7 @@ export const StartEvent = BaseRunEvent.extend({
     // run files written before these fields existed still parse cleanly.
     useCase: z.enum([
         "copilot_chat",
-        "track_block",
+        "live_note_agent",
         "meeting_note",
         "knowledge_sync",
     ]).optional(),
@@ -137,7 +137,7 @@ export const AskHumanResponsePayload = AskHumanResponseEvent.pick({
 
 export const UseCase = z.enum([
     "copilot_chat",
-    "track_block",
+    "live_note_agent",
     "meeting_note",
     "knowledge_sync",
 ]);

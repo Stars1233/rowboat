@@ -196,14 +196,14 @@ const defaultBaseURLs: Partial<Record<LlmProviderFlavor, string>> = {
 function ModelSettings({ dialogOpen }: { dialogOpen: boolean }) {
   const [provider, setProvider] = useState<LlmProviderFlavor>("openai")
   const [defaultProvider, setDefaultProvider] = useState<LlmProviderFlavor | null>(null)
-  const [providerConfigs, setProviderConfigs] = useState<Record<LlmProviderFlavor, { apiKey: string; baseURL: string; models: string[]; knowledgeGraphModel: string; meetingNotesModel: string; trackBlockModel: string }>>({
-    openai: { apiKey: "", baseURL: "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    anthropic: { apiKey: "", baseURL: "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    google: { apiKey: "", baseURL: "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    openrouter: { apiKey: "", baseURL: "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    aigateway: { apiKey: "", baseURL: "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    ollama: { apiKey: "", baseURL: "http://localhost:11434", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    "openai-compatible": { apiKey: "", baseURL: "http://localhost:1234/v1", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
+  const [providerConfigs, setProviderConfigs] = useState<Record<LlmProviderFlavor, { apiKey: string; baseURL: string; models: string[]; knowledgeGraphModel: string; meetingNotesModel: string; liveNoteAgentModel: string }>>({
+    openai: { apiKey: "", baseURL: "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    anthropic: { apiKey: "", baseURL: "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    google: { apiKey: "", baseURL: "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    openrouter: { apiKey: "", baseURL: "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    aigateway: { apiKey: "", baseURL: "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    ollama: { apiKey: "", baseURL: "http://localhost:11434", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    "openai-compatible": { apiKey: "", baseURL: "http://localhost:1234/v1", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
   })
   const [modelsCatalog, setModelsCatalog] = useState<Record<string, LlmModelOption[]>>({})
   const [modelsLoading, setModelsLoading] = useState(false)
@@ -229,7 +229,7 @@ function ModelSettings({ dialogOpen }: { dialogOpen: boolean }) {
     (!requiresBaseURL || activeConfig.baseURL.trim().length > 0)
 
   const updateConfig = useCallback(
-    (prov: LlmProviderFlavor, updates: Partial<{ apiKey: string; baseURL: string; models: string[]; knowledgeGraphModel: string; meetingNotesModel: string; trackBlockModel: string }>) => {
+    (prov: LlmProviderFlavor, updates: Partial<{ apiKey: string; baseURL: string; models: string[]; knowledgeGraphModel: string; meetingNotesModel: string; liveNoteAgentModel: string }>) => {
       setProviderConfigs(prev => ({
         ...prev,
         [prov]: { ...prev[prov], ...updates },
@@ -303,7 +303,7 @@ function ModelSettings({ dialogOpen }: { dialogOpen: boolean }) {
                     models: savedModels,
                     knowledgeGraphModel: e.knowledgeGraphModel || "",
                     meetingNotesModel: e.meetingNotesModel || "",
-                    trackBlockModel: e.trackBlockModel || "",
+                    liveNoteAgentModel: e.liveNoteAgentModel || "",
                   };
                 }
               }
@@ -321,7 +321,7 @@ function ModelSettings({ dialogOpen }: { dialogOpen: boolean }) {
                 models: activeModels.length > 0 ? activeModels : [""],
                 knowledgeGraphModel: parsed.knowledgeGraphModel || "",
                 meetingNotesModel: parsed.meetingNotesModel || "",
-                trackBlockModel: parsed.trackBlockModel || "",
+                liveNoteAgentModel: parsed.liveNoteAgentModel || "",
               };
             }
             return next;
@@ -396,7 +396,7 @@ function ModelSettings({ dialogOpen }: { dialogOpen: boolean }) {
         models: allModels,
         knowledgeGraphModel: activeConfig.knowledgeGraphModel.trim() || undefined,
         meetingNotesModel: activeConfig.meetingNotesModel.trim() || undefined,
-        trackBlockModel: activeConfig.trackBlockModel.trim() || undefined,
+        liveNoteAgentModel: activeConfig.liveNoteAgentModel.trim() || undefined,
       }
       const result = await window.ipc.invoke("models:test", providerConfig)
       if (result.success) {
@@ -430,7 +430,7 @@ function ModelSettings({ dialogOpen }: { dialogOpen: boolean }) {
         models: allModels,
         knowledgeGraphModel: config.knowledgeGraphModel.trim() || undefined,
         meetingNotesModel: config.meetingNotesModel.trim() || undefined,
-        trackBlockModel: config.trackBlockModel.trim() || undefined,
+        liveNoteAgentModel: config.liveNoteAgentModel.trim() || undefined,
       })
       setDefaultProvider(prov)
       window.dispatchEvent(new Event('models-config-changed'))
@@ -461,7 +461,7 @@ function ModelSettings({ dialogOpen }: { dialogOpen: boolean }) {
         parsed.models = defModels
         parsed.knowledgeGraphModel = defConfig.knowledgeGraphModel.trim() || undefined
         parsed.meetingNotesModel = defConfig.meetingNotesModel.trim() || undefined
-        parsed.trackBlockModel = defConfig.trackBlockModel.trim() || undefined
+        parsed.liveNoteAgentModel = defConfig.liveNoteAgentModel.trim() || undefined
       }
       await window.ipc.invoke("workspace:writeFile", {
         path: "config/models.json",
@@ -469,7 +469,7 @@ function ModelSettings({ dialogOpen }: { dialogOpen: boolean }) {
       })
       setProviderConfigs(prev => ({
         ...prev,
-        [prov]: { apiKey: "", baseURL: defaultBaseURLs[prov] || "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
+        [prov]: { apiKey: "", baseURL: defaultBaseURLs[prov] || "", models: [""], knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
       }))
       setTestState({ status: "idle" })
       window.dispatchEvent(new Event('models-config-changed'))
@@ -704,14 +704,14 @@ function ModelSettings({ dialogOpen }: { dialogOpen: boolean }) {
             </div>
           ) : showModelInput ? (
             <Input
-              value={activeConfig.trackBlockModel}
-              onChange={(e) => updateConfig(provider, { trackBlockModel: e.target.value })}
+              value={activeConfig.liveNoteAgentModel}
+              onChange={(e) => updateConfig(provider, { liveNoteAgentModel: e.target.value })}
               placeholder={primaryModel || "Enter model"}
             />
           ) : (
             <Select
-              value={activeConfig.trackBlockModel || "__same__"}
-              onValueChange={(value) => updateConfig(provider, { trackBlockModel: value === "__same__" ? "" : value })}
+              value={activeConfig.liveNoteAgentModel || "__same__"}
+              onValueChange={(value) => updateConfig(provider, { liveNoteAgentModel: value === "__same__" ? "" : value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select a model" />

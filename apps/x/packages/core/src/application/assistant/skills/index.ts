@@ -13,13 +13,13 @@ import appNavigationSkill from "./app-navigation/skill.js";
 import browserControlSkill from "./browser-control/skill.js";
 import codeWithAgentsSkill from "./code-with-agents/skill.js";
 import composioIntegrationSkill from "./composio-integration/skill.js";
-import tracksSkill from "./tracks/skill.js";
+import liveNoteSkill from "./live-note/skill.js";
 import notifyUserSkill from "./notify-user/skill.js";
 
 const CURRENT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const CATALOG_PREFIX = "src/application/assistant/skills";
 
-// console.log(tracksSkill);
+// console.log(liveNoteSkill);
 
 type SkillDefinition = {
   id: string;  // Also used as folder name
@@ -102,10 +102,10 @@ const definitions: SkillDefinition[] = [
     content: codeWithAgentsSkill,
   },
   {
-    id: "tracks",
-    title: "Tracks",
-    summary: "Create and manage tracks — frontmatter directives that keep a note's body auto-updated on a schedule, on incoming events, or manually (weather, news, prices, status, dashboards).",
-    content: tracksSkill,
+    id: "live-note",
+    title: "Live Notes",
+    summary: "Make notes self-updating — a single `live:` objective in the frontmatter that the live-note agent maintains on a schedule, on incoming events, or manually (weather, news, prices, status, dashboards).",
+    content: liveNoteSkill,
   },
   {
     id: "browser-control",

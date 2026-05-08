@@ -21,6 +21,13 @@ import { getDefaultModelAndProvider } from "../models/defaults.js";
 const LegacyStartEvent = StartEvent.extend({
     model: z.string().optional(),
     provider: z.string().optional(),
+    // Pre-rename run files carry `useCase: "track_block"`. Map it to its
+    // canonical successor on read so the strict downstream types never see
+    // the old value. Read-only — writes always use the current enum.
+    useCase: z.preprocess(
+        (v) => (v === 'track_block' ? 'live_note_agent' : v),
+        StartEvent.shape.useCase,
+    ),
 });
 const ReadRunEvent = RunEvent.or(LegacyStartEvent);
 

@@ -94,6 +94,7 @@ import { ConnectorsPopover } from "@/components/connectors-popover"
 import { HelpPopover } from "@/components/help-popover"
 import { SettingsDialog } from "@/components/settings-dialog"
 import { toast } from "@/lib/toast"
+import { formatRelativeTime as formatRunTime } from "@/lib/relative-time"
 import { useBilling } from "@/hooks/useBilling"
 import { ServiceEvent } from "@x/shared/src/service-events.js"
 import type { MeetingTranscriptionState } from "@/hooks/useMeetingTranscription"
@@ -214,8 +215,8 @@ type SidebarContentPanelProps = {
   onToggleBrowser?: () => void
   isSuggestedTopicsOpen?: boolean
   onOpenSuggestedTopics?: () => void
-  isBackgroundAgentsOpen?: boolean
-  onOpenBackgroundAgents?: () => void
+  isLiveNotesOpen?: boolean
+  onOpenLiveNotes?: () => void
 } & React.ComponentProps<typeof Sidebar>
 
 const sectionTabs: { id: ActiveSection; label: string }[] = [
@@ -227,25 +228,6 @@ function formatEventTime(ts: string): string {
   const date = new Date(ts)
   if (Number.isNaN(date.getTime())) return ""
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-}
-
-function formatRunTime(ts: string): string {
-  const date = new Date(ts)
-  if (Number.isNaN(date.getTime())) return ""
-  const now = Date.now()
-  const diffMs = Math.max(0, now - date.getTime())
-  const diffMinutes = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMinutes / 60)
-  const diffDays = Math.floor(diffHours / 24)
-  const diffWeeks = Math.floor(diffDays / 7)
-  const diffMonths = Math.floor(diffDays / 30)
-
-  if (diffMinutes < 1) return "just now"
-  if (diffMinutes < 60) return `${diffMinutes} m`
-  if (diffHours < 24) return `${diffHours} h`
-  if (diffDays < 7) return `${diffDays} d`
-  if (diffWeeks < 4) return `${diffWeeks} w`
-  return `${Math.max(1, diffMonths)} m`
 }
 
 function SyncStatusBar() {
@@ -493,8 +475,8 @@ export function SidebarContentPanel({
   onToggleBrowser,
   isSuggestedTopicsOpen = false,
   onOpenSuggestedTopics,
-  isBackgroundAgentsOpen = false,
-  onOpenBackgroundAgents,
+  isLiveNotesOpen = false,
+  onOpenLiveNotes,
   ...props
 }: SidebarContentPanelProps) {
   const { activeSection, setActiveSection } = useSidebarSection()
@@ -510,7 +492,7 @@ export function SidebarContentPanel({
   const isMeetingQuickActionSelected = isMeetingActionActive
   const isBrowserQuickActionSelected = isBrowserOpen && !isSearchOpen && !isMeetingQuickActionSelected
   const isSuggestedTopicsQuickActionSelected = isSuggestedTopicsOpen && !isBrowserOpen
-  const isBackgroundAgentsQuickActionSelected = isBackgroundAgentsOpen && !isBrowserOpen
+  const isLiveNotesQuickActionSelected = isLiveNotesOpen && !isBrowserOpen
 
   const handleRowboatLogin = useCallback(async () => {
     try {
@@ -684,19 +666,19 @@ export function SidebarContentPanel({
               <span>Suggested Topics</span>
             </button>
           )}
-          {onOpenBackgroundAgents && (
+          {onOpenLiveNotes && (
             <button
               type="button"
-              onClick={onOpenBackgroundAgents}
+              onClick={onOpenLiveNotes}
               className={cn(
                 "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                isBackgroundAgentsQuickActionSelected
+                isLiveNotesQuickActionSelected
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
-              <Bot className="size-4" />
-              <span>Background agents</span>
+              <Radio className="size-4" />
+              <span>Live notes</span>
             </button>
           )}
         </div>

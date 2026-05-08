@@ -7,7 +7,7 @@ import container from "../di/container.js";
 const SIGNED_IN_DEFAULT_MODEL = "gpt-5.4";
 const SIGNED_IN_DEFAULT_PROVIDER = "rowboat";
 const SIGNED_IN_KG_MODEL = "google/gemini-3.1-flash-lite-preview";
-const SIGNED_IN_TRACK_BLOCK_MODEL = "anthropic/claude-haiku-4.5";
+const SIGNED_IN_LIVE_NOTE_AGENT_MODEL = "anthropic/claude-haiku-4.5";
 
 /**
  * The single source of truth for "what model+provider should we use when
@@ -66,14 +66,14 @@ export async function getKgModel(): Promise<string> {
 }
 
 /**
- * Model used by track-block runner + routing classifier.
- * Signed-in: curated default. BYOK: user override (`trackBlockModel`) or
+ * Model used by the live-note agent + routing classifier.
+ * Signed-in: curated default. BYOK: user override (`liveNoteAgentModel`) or
  * assistant model.
  */
-export async function getTrackBlockModel(): Promise<string> {
-    if (await isSignedIn()) return SIGNED_IN_TRACK_BLOCK_MODEL;
+export async function getLiveNoteAgentModel(): Promise<string> {
+    if (await isSignedIn()) return SIGNED_IN_LIVE_NOTE_AGENT_MODEL;
     const cfg = await container.resolve<IModelConfigRepo>("modelConfigRepo").getConfig();
-    return cfg.trackBlockModel ?? cfg.model;
+    return cfg.liveNoteAgentModel ?? cfg.model;
 }
 
 /**

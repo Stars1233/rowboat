@@ -29,14 +29,14 @@ export function useOnboardingState(open: boolean, onComplete: () => void) {
   const [modelsCatalog, setModelsCatalog] = useState<Record<string, LlmModelOption[]>>({})
   const [modelsLoading, setModelsLoading] = useState(false)
   const [modelsError, setModelsError] = useState<string | null>(null)
-  const [providerConfigs, setProviderConfigs] = useState<Record<LlmProviderFlavor, { apiKey: string; baseURL: string; model: string; knowledgeGraphModel: string; meetingNotesModel: string; trackBlockModel: string }>>({
-    openai: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    anthropic: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    google: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    openrouter: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    aigateway: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    ollama: { apiKey: "", baseURL: "http://localhost:11434", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    "openai-compatible": { apiKey: "", baseURL: "http://localhost:1234/v1", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
+  const [providerConfigs, setProviderConfigs] = useState<Record<LlmProviderFlavor, { apiKey: string; baseURL: string; model: string; knowledgeGraphModel: string; meetingNotesModel: string; liveNoteAgentModel: string }>>({
+    openai: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    anthropic: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    google: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    openrouter: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    aigateway: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    ollama: { apiKey: "", baseURL: "http://localhost:11434", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    "openai-compatible": { apiKey: "", baseURL: "http://localhost:1234/v1", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
   })
   const [testState, setTestState] = useState<{ status: "idle" | "testing" | "success" | "error"; error?: string }>({
     status: "idle",
@@ -81,7 +81,7 @@ export function useOnboardingState(open: boolean, onComplete: () => void) {
   const [googleCalendarConnecting, setGoogleCalendarConnecting] = useState(false)
 
   const updateProviderConfig = useCallback(
-    (provider: LlmProviderFlavor, updates: Partial<{ apiKey: string; baseURL: string; model: string; knowledgeGraphModel: string; meetingNotesModel: string; trackBlockModel: string }>) => {
+    (provider: LlmProviderFlavor, updates: Partial<{ apiKey: string; baseURL: string; model: string; knowledgeGraphModel: string; meetingNotesModel: string; liveNoteAgentModel: string }>) => {
       setProviderConfigs(prev => ({
         ...prev,
         [provider]: { ...prev[provider], ...updates },
@@ -419,7 +419,7 @@ export function useOnboardingState(open: boolean, onComplete: () => void) {
       const model = activeConfig.model.trim()
       const knowledgeGraphModel = activeConfig.knowledgeGraphModel.trim() || undefined
       const meetingNotesModel = activeConfig.meetingNotesModel.trim() || undefined
-      const trackBlockModel = activeConfig.trackBlockModel.trim() || undefined
+      const liveNoteAgentModel = activeConfig.liveNoteAgentModel.trim() || undefined
       const providerConfig = {
         provider: {
           flavor: llmProvider,
@@ -429,7 +429,7 @@ export function useOnboardingState(open: boolean, onComplete: () => void) {
         model,
         knowledgeGraphModel,
         meetingNotesModel,
-        trackBlockModel,
+        liveNoteAgentModel,
       }
       const result = await window.ipc.invoke("models:test", providerConfig)
       if (result.success) {
@@ -446,7 +446,7 @@ export function useOnboardingState(open: boolean, onComplete: () => void) {
       setTestState({ status: "error", error: "Connection test failed" })
       toast.error("Connection test failed")
     }
-  }, [activeConfig.apiKey, activeConfig.baseURL, activeConfig.model, activeConfig.knowledgeGraphModel, activeConfig.meetingNotesModel, activeConfig.trackBlockModel, canTest, llmProvider, handleNext])
+  }, [activeConfig.apiKey, activeConfig.baseURL, activeConfig.model, activeConfig.knowledgeGraphModel, activeConfig.meetingNotesModel, activeConfig.liveNoteAgentModel, canTest, llmProvider, handleNext])
 
   // Check connection status for all providers
   const refreshAllStatuses = useCallback(async () => {

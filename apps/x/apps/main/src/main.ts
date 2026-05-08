@@ -4,7 +4,7 @@ import {
   setupIpcHandlers,
   startRunsWatcher,
   startServicesWatcher,
-  startTracksWatcher,
+  startLiveNoteAgentWatcher,
   startWorkspaceWatcher,
   stopRunsWatcher,
   stopServicesWatcher,
@@ -24,8 +24,8 @@ import { init as initInlineTasks } from "@x/core/dist/knowledge/inline_tasks.js"
 import { init as initAgentRunner } from "@x/core/dist/agent-schedule/runner.js";
 import { init as initAgentNotes } from "@x/core/dist/knowledge/agent_notes.js";
 import { init as initCalendarNotifications } from "@x/core/dist/knowledge/notify_calendar_meetings.js";
-import { init as initTrackScheduler } from "@x/core/dist/knowledge/track/scheduler.js";
-import { init as initTrackEventProcessor } from "@x/core/dist/knowledge/track/events.js";
+import { init as initLiveNoteScheduler } from "@x/core/dist/knowledge/live-note/scheduler.js";
+import { init as initLiveNoteEventProcessor } from "@x/core/dist/knowledge/live-note/events.js";
 import { init as initLocalSites, shutdown as shutdownLocalSites } from "@x/core/dist/local-sites/server.js";
 import { shutdown as shutdownAnalytics } from "@x/core/dist/analytics/posthog.js";
 import { identifyIfSignedIn } from "@x/core/dist/analytics/identify.js";
@@ -328,14 +328,14 @@ app.whenReady().then(async () => {
   // start services watcher
   startServicesWatcher();
 
-  // start tracks watcher
-  startTracksWatcher();
+  // start live-note agent event watcher (forwards bus → renderer)
+  startLiveNoteAgentWatcher();
 
-  // start track scheduler (cron/window/once)
-  initTrackScheduler();
+  // start live-note scheduler (cron / window)
+  initLiveNoteScheduler();
 
-  // start track event processor (consumes events/pending/, triggers matching tracks)
-  initTrackEventProcessor();
+  // start live-note event processor (consumes events/pending/, routes to matching live notes)
+  initLiveNoteEventProcessor();
 
   // start gmail sync
   initGmailSync();

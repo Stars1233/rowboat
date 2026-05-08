@@ -59,14 +59,14 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
   const [modelsCatalog, setModelsCatalog] = useState<Record<string, LlmModelOption[]>>({})
   const [modelsLoading, setModelsLoading] = useState(false)
   const [modelsError, setModelsError] = useState<string | null>(null)
-  const [providerConfigs, setProviderConfigs] = useState<Record<LlmProviderFlavor, { apiKey: string; baseURL: string; model: string; knowledgeGraphModel: string; meetingNotesModel: string; trackBlockModel: string }>>({
-    openai: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    anthropic: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    google: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    openrouter: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    aigateway: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    ollama: { apiKey: "", baseURL: "http://localhost:11434", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
-    "openai-compatible": { apiKey: "", baseURL: "http://localhost:1234/v1", model: "", knowledgeGraphModel: "", meetingNotesModel: "", trackBlockModel: "" },
+  const [providerConfigs, setProviderConfigs] = useState<Record<LlmProviderFlavor, { apiKey: string; baseURL: string; model: string; knowledgeGraphModel: string; meetingNotesModel: string; liveNoteAgentModel: string }>>({
+    openai: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    anthropic: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    google: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    openrouter: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    aigateway: { apiKey: "", baseURL: "", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    ollama: { apiKey: "", baseURL: "http://localhost:11434", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
+    "openai-compatible": { apiKey: "", baseURL: "http://localhost:1234/v1", model: "", knowledgeGraphModel: "", meetingNotesModel: "", liveNoteAgentModel: "" },
   })
   const [testState, setTestState] = useState<{ status: "idle" | "testing" | "success" | "error"; error?: string }>({
     status: "idle",
@@ -109,7 +109,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
   const [googleCalendarConnecting, setGoogleCalendarConnecting] = useState(false)
 
   const updateProviderConfig = useCallback(
-    (provider: LlmProviderFlavor, updates: Partial<{ apiKey: string; baseURL: string; model: string; knowledgeGraphModel: string; meetingNotesModel: string; trackBlockModel: string }>) => {
+    (provider: LlmProviderFlavor, updates: Partial<{ apiKey: string; baseURL: string; model: string; knowledgeGraphModel: string; meetingNotesModel: string; liveNoteAgentModel: string }>) => {
       setProviderConfigs(prev => ({
         ...prev,
         [provider]: { ...prev[provider], ...updates },
@@ -442,7 +442,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
       const model = activeConfig.model.trim()
       const knowledgeGraphModel = activeConfig.knowledgeGraphModel.trim() || undefined
       const meetingNotesModel = activeConfig.meetingNotesModel.trim() || undefined
-      const trackBlockModel = activeConfig.trackBlockModel.trim() || undefined
+      const liveNoteAgentModel = activeConfig.liveNoteAgentModel.trim() || undefined
       const providerConfig = {
         provider: {
           flavor: llmProvider,
@@ -452,7 +452,7 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
         model,
         knowledgeGraphModel,
         meetingNotesModel,
-        trackBlockModel,
+        liveNoteAgentModel,
       }
       const result = await window.ipc.invoke("models:test", providerConfig)
       if (result.success) {
@@ -1195,14 +1195,14 @@ export function OnboardingModal({ open, onComplete }: OnboardingModalProps) {
                 </div>
               ) : showModelInput ? (
                 <Input
-                  value={activeConfig.trackBlockModel}
-                  onChange={(e) => updateProviderConfig(llmProvider, { trackBlockModel: e.target.value })}
+                  value={activeConfig.liveNoteAgentModel}
+                  onChange={(e) => updateProviderConfig(llmProvider, { liveNoteAgentModel: e.target.value })}
                   placeholder={activeConfig.model || "Enter model"}
                 />
               ) : (
                 <Select
-                  value={activeConfig.trackBlockModel || "__same__"}
-                  onValueChange={(value) => updateProviderConfig(llmProvider, { trackBlockModel: value === "__same__" ? "" : value })}
+                  value={activeConfig.liveNoteAgentModel || "__same__"}
+                  onValueChange={(value) => updateProviderConfig(llmProvider, { liveNoteAgentModel: value === "__same__" ? "" : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a model" />

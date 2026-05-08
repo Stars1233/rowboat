@@ -1,11 +1,11 @@
-import type { TrackEventType } from '@x/shared/dist/track.js';
+import type { LiveNoteAgentEventType } from '@x/shared/dist/live-note.js';
 
-type Handler = (event: TrackEventType) => void;
+type Handler = (event: LiveNoteAgentEventType) => void;
 
-class TrackBus {
+class LiveNoteBus {
     private subs: Handler[] = [];
 
-    publish(event: TrackEventType): void {
+    publish(event: LiveNoteAgentEventType): void {
         for (const handler of this.subs) {
             handler(event);
         }
@@ -20,4 +20,4 @@ class TrackBus {
     }
 }
 
-export const trackBus = new TrackBus();
+export const liveNoteBus = new LiveNoteBus();

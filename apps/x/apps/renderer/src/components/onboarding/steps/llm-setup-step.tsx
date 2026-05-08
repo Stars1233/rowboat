@@ -268,14 +268,14 @@ export function LlmSetupStep({ state }: LlmSetupStepProps) {
               </div>
             ) : showModelInput ? (
               <Input
-                value={activeConfig.trackBlockModel}
-                onChange={(e) => updateProviderConfig(llmProvider, { trackBlockModel: e.target.value })}
+                value={activeConfig.liveNoteAgentModel}
+                onChange={(e) => updateProviderConfig(llmProvider, { liveNoteAgentModel: e.target.value })}
                 placeholder={activeConfig.model || "Enter model"}
               />
             ) : (
               <Select
-                value={activeConfig.trackBlockModel || "__same__"}
-                onValueChange={(value) => updateProviderConfig(llmProvider, { trackBlockModel: value === "__same__" ? "" : value })}
+                value={activeConfig.liveNoteAgentModel || "__same__"}
+                onValueChange={(value) => updateProviderConfig(llmProvider, { liveNoteAgentModel: value === "__same__" ? "" : value })}
               >
                 <SelectTrigger className="w-full truncate">
                   <SelectValue placeholder="Select a model" />
