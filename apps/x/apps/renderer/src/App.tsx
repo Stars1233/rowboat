@@ -17,6 +17,7 @@ import { ImageFileViewer } from '@/components/image-file-viewer';
 import { VideoFileViewer } from '@/components/video-file-viewer';
 import { AudioFileViewer } from '@/components/audio-file-viewer';
 import { PersistentViewerCache } from '@/components/persistent-viewer-cache';
+import { getViewerType, isMediaPath, isCacheableViewerPath } from '@/lib/file-types';
 import { useDebounce } from './hooks/use-debounce';
 import { SidebarContentPanel } from '@/components/sidebar-content';
 import { SuggestedTopicsView } from '@/components/suggested-topics-view';
@@ -1428,10 +1429,10 @@ function App() {
     }
     const requestId = (fileLoadRequestIdRef.current += 1)
     const pathToLoad = selectedPath
-    // Media viewers (HTML, image, video, PDF) self-load via app:// protocol.
+    // Media viewers (HTML, image, video, audio, PDF) self-load via app:// protocol.
     // Skip the generic UTF-8 loader so we don't trash fileContent with binary
     // bytes or double-fetch large files.
-    if (/\.(html?|png|jpe?g|webp|gif|svg|avif|bmp|ico|mp4|mov|webm|m4v|pdf|mp3|wav|m4a|ogg|flac|aac)$/i.test(pathToLoad)) {
+    if (isMediaPath(pathToLoad)) {
       setFileContent('')
       return
     }
@@ -4725,11 +4726,11 @@ function App() {
                 {/* Always-mounted persistent cache for HTML/PDF — hidden when active file is something else, so iframes preserve scroll/page/zoom across switches. */}
                 <div
                   className="flex-1 min-h-0 overflow-hidden"
-                  style={{ display: /\.(html?|pdf)$/i.test(selectedPath) ? 'block' : 'none' }}
+                  style={{ display: isCacheableViewerPath(selectedPath) ? 'block' : 'none' }}
                 >
                   <PersistentViewerCache activePath={selectedPath} />
                 </div>
-                {!/\.(html?|pdf)$/i.test(selectedPath) && (
+                {!isCacheableViewerPath(selectedPath) && (
                 selectedPath.endsWith('.md') ? (
                   <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -4839,15 +4840,15 @@ function App() {
                       />
                     )}
                   </div>
-                ) : selectedPath && /\.(png|jpe?g|webp|gif|svg|avif|bmp|ico)$/i.test(selectedPath) ? (
+                ) : selectedPath && getViewerType(selectedPath) === 'image' ? (
                   <div className="flex-1 min-h-0 overflow-hidden">
                     <ImageFileViewer path={selectedPath} />
                   </div>
-                ) : selectedPath && /\.(mp4|mov|webm|m4v)$/i.test(selectedPath) ? (
+                ) : selectedPath && getViewerType(selectedPath) === 'video' ? (
                   <div className="flex-1 min-h-0 overflow-hidden">
                     <VideoFileViewer path={selectedPath} />
                   </div>
-                ) : selectedPath && /\.(mp3|wav|m4a|ogg|flac|aac)$/i.test(selectedPath) ? (
+                ) : selectedPath && getViewerType(selectedPath) === 'audio' ? (
                   <div className="flex-1 min-h-0 overflow-hidden">
                     <AudioFileViewer path={selectedPath} />
                   </div>

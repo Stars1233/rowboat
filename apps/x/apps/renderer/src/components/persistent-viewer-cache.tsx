@@ -1,22 +1,14 @@
 import { useEffect, useState } from 'react'
 import { HtmlFileViewer } from './html-file-viewer'
 import { PdfFileViewer } from './pdf-file-viewer'
+import { getViewerType, isCacheableViewerPath } from '@/lib/file-types'
 
 const CACHE_LIMIT = 3
 
-function isCacheable(path: string): boolean {
-  const lower = path.toLowerCase()
-  return lower.endsWith('.html') || lower.endsWith('.htm') || lower.endsWith('.pdf')
-}
-
 function renderViewer(path: string): JSX.Element | null {
-  const lower = path.toLowerCase()
-  if (lower.endsWith('.html') || lower.endsWith('.htm')) {
-    return <HtmlFileViewer path={path} />
-  }
-  if (lower.endsWith('.pdf')) {
-    return <PdfFileViewer path={path} />
-  }
+  const type = getViewerType(path)
+  if (type === 'html') return <HtmlFileViewer path={path} />
+  if (type === 'pdf') return <PdfFileViewer path={path} />
   return null
 }
 
@@ -31,11 +23,11 @@ interface PersistentViewerCacheProps {
  */
 export function PersistentViewerCache({ activePath }: PersistentViewerCacheProps) {
   const [mountedPaths, setMountedPaths] = useState<string[]>(() =>
-    isCacheable(activePath) ? [activePath] : []
+    isCacheableViewerPath(activePath) ? [activePath] : []
   )
 
   useEffect(() => {
-    if (!isCacheable(activePath)) return
+    if (!isCacheableViewerPath(activePath)) return
     setMountedPaths((prev) => {
       // Never reorder existing entries — moving a keyed iframe in the DOM
       // detaches it, which causes the browser to re-navigate (state lost).
