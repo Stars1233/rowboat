@@ -13,6 +13,12 @@ import { ChatInputWithMentions, type StagedAttachment } from './components/chat-
 import { ChatMessageAttachments } from '@/components/chat-message-attachments'
 import { GraphView, type GraphEdge, type GraphNode } from '@/components/graph-view';
 import { BasesView, type BaseConfig, DEFAULT_BASE_CONFIG } from '@/components/bases-view';
+import { ImageFileViewer } from '@/components/image-file-viewer';
+import { VideoFileViewer } from '@/components/video-file-viewer';
+import { AudioFileViewer } from '@/components/audio-file-viewer';
+import { PersistentViewerCache } from '@/components/persistent-viewer-cache';
+import { UnsupportedFileViewer } from '@/components/unsupported-file-viewer';
+import { getViewerType, isCacheableViewerPath } from '@/lib/file-types';
 import { useDebounce } from './hooks/use-debounce';
 import { SidebarContentPanel } from '@/components/sidebar-content';
 import { SuggestedTopicsView } from '@/components/suggested-topics-view';
@@ -1425,6 +1431,13 @@ function App() {
     }
     const requestId = (fileLoadRequestIdRef.current += 1)
     const pathToLoad = selectedPath
+    // Only the markdown editor still consumes fileContent. Every other viewer
+    // (media + UnsupportedFileViewer) self-loads, so skip the generic UTF-8
+    // loader to avoid double-fetching and to avoid slurping binary bytes.
+    if (!pathToLoad.endsWith('.md')) {
+      setFileContent('')
+      return
+    }
     let cancelled = false
     ;(async () => {
       try {
@@ -4715,6 +4728,15 @@ function App() {
                   />
                 </div>
               ) : selectedPath ? (
+                <>
+                {/* Always-mounted persistent cache for HTML/PDF — hidden when active file is something else, so iframes preserve scroll/page/zoom across switches. */}
+                <div
+                  className="flex-1 min-h-0 overflow-hidden"
+                  style={{ display: isCacheableViewerPath(selectedPath) ? 'block' : 'none' }}
+                >
+                  <PersistentViewerCache activePath={selectedPath} />
+                </div>
+                {!isCacheableViewerPath(selectedPath) && (
                 selectedPath.endsWith('.md') ? (
                   <div className="flex-1 min-h-0 flex flex-row overflow-hidden">
                     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -4824,13 +4846,25 @@ function App() {
                       />
                     )}
                   </div>
+                ) : selectedPath && getViewerType(selectedPath) === 'image' ? (
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <ImageFileViewer path={selectedPath} />
+                  </div>
+                ) : selectedPath && getViewerType(selectedPath) === 'video' ? (
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <VideoFileViewer path={selectedPath} />
+                  </div>
+                ) : selectedPath && getViewerType(selectedPath) === 'audio' ? (
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <AudioFileViewer path={selectedPath} />
+                  </div>
                 ) : (
-                  <div className="flex-1 overflow-auto p-4">
-                    <pre className="text-sm font-mono text-foreground whitespace-pre-wrap">
-                      {fileContent || 'Loading...'}
-                    </pre>
+                  <div className="flex-1 min-h-0 overflow-hidden">
+                    <UnsupportedFileViewer path={selectedPath} />
                   </div>
                 )
+                )}
+                </>
               ) : selectedTask ? (
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <BackgroundTaskDetail
