@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 import { HtmlFileViewer } from './html-file-viewer'
 import { PdfFileViewer } from './pdf-file-viewer'
 import { getViewerType, isCacheableViewerPath } from '@/lib/file-types'
