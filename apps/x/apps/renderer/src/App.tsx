@@ -688,7 +688,7 @@ function App() {
 
   // File browser state (for Knowledge section)
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
-  const [fileContent, setFileContent] = useState<string>('')
+  const [, setFileContent] = useState<string>('')
   const [editorContent, setEditorContent] = useState<string>('')
   const editorContentRef = useRef<string>('')
   const [editorContentByPath, setEditorContentByPath] = useState<Record<string, string>>({})
