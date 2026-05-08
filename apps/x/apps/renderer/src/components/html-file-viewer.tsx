@@ -124,6 +124,14 @@ export function HtmlFileViewer({ path }: HtmlFileViewerProps) {
     )
   }
 
+  // We use `srcDoc` here (not `src=app://workspace/<path>`) so the iframe
+  // gets a null origin with no base URL. Trade-off: relative assets inside
+  // the file — `<link href="./style.css">`, `<img src="./pic.png">`,
+  // `<script src="./foo.js">` — will silently 404. Self-contained HTML
+  // works fine; HTML that ships next to sibling assets will look broken.
+  // TODO: switch to `src=app://workspace/<path>` if we want relative-asset
+  // support; that path also resolves through the existing path-traversal
+  // guard in resolveWorkspacePath.
   return (
     <div className="relative h-full w-full">
       {state.kind === 'loaded' && (
