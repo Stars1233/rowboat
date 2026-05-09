@@ -194,14 +194,14 @@ Displays an image with optional alt text and caption.
 - \`caption\` (optional): Caption displayed below the image
 
 ### Embed Block
-Embeds external content (YouTube videos, Figma designs, or generic links).
+Embeds external content (YouTube videos, Figma designs, tweets, or generic links).
 \`\`\`embed
 {"provider": "youtube", "url": "https://www.youtube.com/watch?v=VIDEO_ID", "caption": "Video title"}
 \`\`\`
-- \`provider\` (required): \`"youtube"\`, \`"figma"\`, or \`"generic"\`
+- \`provider\` (required): \`"youtube"\`, \`"figma"\`, \`"tweet"\`, or \`"generic"\`
 - \`url\` (required): Full URL to the content
 - \`caption\` (optional): Caption displayed below the embed
-- YouTube and Figma render as iframes; generic shows a link card
+- YouTube and Figma render as iframes; tweet renders inline from the tweet URL; generic shows a link card
 
 ### Iframe Block
 Embeds an arbitrary web page or a locally-served dashboard in the note.

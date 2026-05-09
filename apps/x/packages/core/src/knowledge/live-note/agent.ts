@@ -190,9 +190,9 @@ Use for: charts, screenshots, photos you have a URL or workspace path for.
 
 Required: \`src\` (URL or workspace path). Optional: \`alt\`, \`caption\`.
 
-## \`embed\` — YouTube / Figma embed (JSON)
+## \`embed\` — YouTube / Figma / Tweet embed (JSON)
 
-Use for: linking to a video or design that should render inline.
+Use for: linking to a video, design, or tweet that should render inline.
 
 \`\`\`embed
 {
@@ -202,7 +202,7 @@ Use for: linking to a video or design that should render inline.
 }
 \`\`\`
 
-Required: \`provider\` ("youtube" | "figma" | "generic"), \`url\`. Optional: \`caption\`.
+Required: \`provider\` ("youtube" | "figma" | "tweet" | "generic"), \`url\`. Optional: \`caption\`.
 
 ## \`iframe\` — arbitrary embedded webpage (JSON)
 
