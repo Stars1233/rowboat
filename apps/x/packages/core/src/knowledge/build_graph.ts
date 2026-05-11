@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { WorkDir } from '../config/config.js';
+import { getKgModel } from '../models/defaults.js';
 import { createRun, createMessage } from '../runs/runs.js';
 import { bus } from '../runs/bus.js';
 import { getErrorDetails, waitForRunCompletion } from '../agents/utils.js';
@@ -252,6 +253,7 @@ async function createNotesFromBatch(
     // Create a run for the note creation agent
     const run = await createRun({
         agentId: NOTE_CREATION_AGENT,
+        model: await getKgModel(),
         useCase: 'knowledge_sync',
         subUseCase: 'build_graph',
     });
