@@ -22,7 +22,7 @@ export const ImageBlockSchema = z.object({
 export type ImageBlock = z.infer<typeof ImageBlockSchema>;
 
 export const EmbedBlockSchema = z.object({
-  provider: z.enum(['youtube', 'figma', 'generic']),
+  provider: z.enum(['youtube', 'figma', 'tweet', 'generic']),
   url: z.string().url(),
   caption: z.string().optional(),
 });
